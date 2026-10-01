@@ -1,0 +1,1 @@
+export function requestedProperty(req:Request){const value=new URL(req.url).searchParams.get('propertyId')||'1';if(!/^[1-9]\d*$/.test(value)||!Number.isSafeInteger(Number(value)))throw Error('Invalid property');return Number(value);}

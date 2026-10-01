@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790816635398,
+      "tag": "0000_furry_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790817314662,
+      "tag": "0001_lyrical_hex",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790818620357,
+      "tag": "0002_tan_daredevil",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790818965627,
+      "tag": "0003_brainy_rictor",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790819475706,
+      "tag": "0004_left_ares",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790820486454,
+      "tag": "0005_sloppy_scourge",
+      "breakpoints": true
+    }
+  ]
+}

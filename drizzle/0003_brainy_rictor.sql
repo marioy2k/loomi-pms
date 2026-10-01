@@ -1,0 +1,1 @@
+ALTER TABLE `transactions` ADD `method` text DEFAULT 'Unspecified' NOT NULL;

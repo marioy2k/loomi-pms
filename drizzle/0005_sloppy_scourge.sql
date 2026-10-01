@@ -1,0 +1,1 @@
+ALTER TABLE `staff` ADD `property_ids` text DEFAULT '[]' NOT NULL;
