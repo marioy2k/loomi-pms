@@ -1,0 +1,9 @@
+node_modules
+.next
+data
+secrets
+*.pem
+*.tsbuildinfo
+.git
+.env*
+tests

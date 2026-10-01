@@ -1,0 +1,5 @@
+'use client';
+import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/components/ui/select';
+import type {Booking,Room} from '@/lib/pms';
+import {roomAvailability} from '@/lib/room-availability';
+export default function RoomChoice({rooms,bookings,booking,onChange,disabled}:{rooms:Room[];bookings:Booking[];booking:Booking;onChange:(id:string)=>void;disabled:boolean}){const selected=rooms.find(r=>r.id===booking.room);const available=selected&&roomAvailability(selected,bookings,booking)==='Available';return <Select value={booking.room} onValueChange={onChange} disabled={disabled}><SelectTrigger className={'w-full room-picker '+(available?'room-available':'room-busy')}><SelectValue placeholder="Choose a room"/></SelectTrigger><SelectContent>{rooms.map(r=>{const status=roomAvailability(r,bookings,booking);return <SelectItem className={'room-option '+(status==='Available'?'room-available':'room-busy')} value={r.id} key={r.id} disabled={status!=='Available'}><span>{r.id} · {r.type} · {status}</span></SelectItem>})}</SelectContent></Select>}
