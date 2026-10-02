@@ -23,7 +23,7 @@ export async function saveAccounting(db:any,propertyId:number,x:any,actor:string
  if(x.action==='settle-record'){
   if(!uuid(x.id)||!validDate(x.date)||x.date>now.slice(0,10)||!money(x.amount)||!['Cash','Card','Bank transfer'].includes(x.method))fail(400,'Enter a valid payment date, amount and method');
   const r=await db.prepare('SELECT * FROM accounting_records WHERE id=? AND property_id=?').bind(String(x.recordId),propertyId).first() as AccountingRecord|null;if(!r)fail(404,'Accounting record not found');
-  if(r!.id.startsWith('pos-'))fail(400,'Manage POS payments and refunds from Point of sale');
+  if(r!.id.startsWith('pos-')||r!.id.startsWith('pass-'))fail(400,'Manage POS or swimming voucher payments in their own screens');
   const refund=r!.kind==='Security deposit'&&x.direction==='refund';if(r!.kind==='Security deposit'&&!['receive','refund'].includes(x.direction))fail(400,'Choose receive or refund');
   const sign=refund||r!.kind==='Expense'||r!.kind==='Income credit'?-1:1,amount=sign*cents(x.amount);
   const kind=r!.kind==='Security deposit'?(refund?'Deposit refund':'Deposit received'):r!.kind==='Income credit'?'Income refund':r!.kind==='Expense credit'?'Expense refund':r!.kind;

@@ -57,6 +57,13 @@
       "when": 1790909564038,
       "tag": "0007_omniscient_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790912781409,
+      "tag": "0008_amused_eternals",
+      "breakpoints": true
     }
   ]
 }
