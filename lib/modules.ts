@@ -5,3 +5,5 @@ export type ModuleAccess={enabledModules?:Module[];licensedModules?:Module[]};
 export function moduleEnabled(a:ModuleAccess|null|undefined,key:Module){return !!a&&(a.enabledModules===undefined||a.enabledModules.includes(key));}
 export type ModuleSettings={licensed:Module[];enabled:Module[];version:number;mode:'demo'|'licensed';company:string;term:string;expiresAt:string|null;legacy:boolean};
 export type ModuleEntitlements=Omit<ModuleSettings,'enabled'|'version'>;
+
+export type LicenceSummary={mode:'demo'|'licensed';term:string;expiresAt:string|null};
