@@ -1,0 +1,11 @@
+# Supply inventory
+
+Open Inventory for the selected hotel or house. Add items such as bed sheets, towels, cleaning bottles and amenities, choose a category and a whole unit (pieces, bottles, packs), and set a low stock minimum. New items start at zero: use Receive stock for opening counts and deliveries.
+
+Staff with housekeeping or Request inventory supplies permission can request supplies and view their own requests and movements. Requests include the recipient, quantity, room/task/purpose and creation time; pending requests do not reserve or reduce stock. Supervisors with Approve supply handovers and returns permission review all requests for assigned properties. Approve & hand over records approval and physical handover in one action, at the server time. A different supervisor must approve an employee’s own request, including administrators. Stock availability is rechecked when approving; insufficient stock prevents approval. Rejection requires a reason; requesters can cancel their pending requests.
+
+Each completed issue records who took the items, when they were taken, and the supervisor’s name and sign-in email. The movement history is append-only; names, item names and units are kept as snapshots. Supervisors can record partial or full returns against an issued request; returns cannot exceed the unreturned quantity. Stock management permission enables item editing, deliveries and signed stock adjustments for count corrections, damage or losses; each adjustment requires a reason and records the staff member. Inactive items retain their history and support returns but block new requests and handovers.
+
+Stock managers and supervisors can enter requests on behalf of active staff with inventory access to the selected property. Ordinary employees cannot select a different recipient. Owners and administrators have all permissions. Configure supervisor and stock manager permissions in Staff accounts; these are separate employee permissions. Dates and times display in America/Paramaribo. Retries cannot duplicate quantities and competing approvals cannot overdraw stock.
+
+This section tracks quantities, not inventory valuation or purchases in accounting. Delivery expense bills are entered separately in Accounting. Quantities use whole units, not fractional litres.
