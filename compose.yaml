@@ -1,6 +1,7 @@
 services:
   loomi:
     build: ./self-hosted
+    image: loomi-pms:local
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
@@ -9,6 +10,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_NAME: ${ADMIN_NAME:-Administrator}
       COOKIE_SECURE: "true"
+      LOOMI_WEBHOOK_ALLOWED_ORIGINS: ${LOOMI_WEBHOOK_ALLOWED_ORIGINS:-}
     secrets:
       - admin_password
       - licence_public_key
@@ -23,6 +25,23 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+  webhook-worker:
+    image: loomi-pms:local
+    restart: unless-stopped
+    command: ["node", "tools/webhook-worker.mjs"]
+    depends_on:
+      loomi:
+        condition: service_healthy
+    environment:
+      LOOMI_WEBHOOK_ALLOWED_ORIGINS: ${LOOMI_WEBHOOK_ALLOWED_ORIGINS:-}
+    secrets:
+      - licence_public_key
+    volumes:
+      - loomi_data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 secrets:
   admin_password:
     file: ./secrets/admin_password

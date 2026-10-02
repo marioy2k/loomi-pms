@@ -97,3 +97,9 @@ Schema migrations apply on startup. Review migrations before updating; restore a
 Node production build, password/session tests, licence signature/expiry tests and SQLite transaction/backup tests are checked. Docker itself was unavailable in the development environment; the image must be built and checked on your Ubuntu server before production use. This is an initial self-hosted release, not an independent security audit. SQLite files are not encrypted by this application; use disk encryption and restricted server access. There is no MFA, forgotten-password email flow, background mobile push or PWA installation yet. Browser alerts run while the application is open. Keep the GitHub repository private, keep dependencies updated, use HTTPS, and test staff permissions with test accounts before adding real guests.
 
 Powered by Bitwise MSP — +5977238113 — support@bitwisesr.com.
+
+## n8n and AI integration
+
+This release includes scoped bearer tokens and an owner approval queue under **Settings → Integrations & AI**. See [N8N.md](self-hosted/N8N.md) for endpoints, permissions, n8n setup, idempotency and signed webhook verification. The [OpenAPI reference](self-hosted/openapi.json) describes v1 requests and responses.
+
+For outgoing webhook delivery, configure the trusted n8n origin in `.env` before startup, for example `LOOMI_WEBHOOK_ALLOWED_ORIGINS=https://n8n.your-domain.com`. The Compose `webhook-worker` service runs beside Loomi and shares its database. No destinations are allowed by default. After deployment, check `docker compose ps` and `docker compose logs --tail=50 webhook-worker`, then test an event with a receiver that verifies signatures and deduplicates event IDs. No n8n workflows or AI credentials are created automatically.
