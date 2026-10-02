@@ -1,3 +1,4 @@
+import {moduleEnabled} from '@/lib/modules';
 import {checkOrigin} from '@/runtime/core.mjs';
 import {requestedProperty} from '@/lib/properties';
 import {database} from '@/db/raw';
@@ -6,7 +7,7 @@ import {can,canAccessProperty} from '@/lib/permissions';
 import {initializeLedger} from '@/lib/ledger';
 import {saveAccounting,accountingError} from '@/lib/accounting-service';
 export async function GET(req:Request){try{
- const user=await access();if(!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
+ const user=await access();if(!moduleEnabled(user,'accounting'))return Response.json({error:'This company feature is disabled or not included in the licence'},{status:403});if(!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
  const db=database();const all=new URL(req.url).searchParams.get('scope')==='all',id=requestedProperty(req);
  if(!all&&!canAccessProperty(user,id))return Response.json({error:'Property access denied'},{status:403});
  const list=await db.prepare('SELECT id,data FROM property ORDER BY id').all<{id:number;data:string}>();const allowed=list.results.filter(p=>canAccessProperty(user,p.id)&&(all||p.id===id));
@@ -18,7 +19,7 @@ export async function GET(req:Request){try{
  return Response.json({transactions:result[1].results,records:result[2].results,properties});
  }catch(e){console.error(e);return Response.json({error:'Unable to load accounting records. Please retry.'},{status:503});}}
 export async function POST(req:Request){try{
- const user=await access();if(!user||!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
+ const user=await access();if(!moduleEnabled(user,'accounting'))return Response.json({error:'This company feature is disabled or not included in the licence'},{status:403});if(!user||!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
  try{checkOrigin(req)}catch{return Response.json({error:'Invalid request origin'},{status:403})}
  const propertyId=requestedProperty(req);if(!canAccessProperty(user,propertyId))return Response.json({error:'Property access denied'},{status:403});
  return Response.json(await saveAccounting(database(),propertyId,await req.json(),user.email));

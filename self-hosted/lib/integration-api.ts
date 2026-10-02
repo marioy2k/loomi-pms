@@ -1,3 +1,4 @@
+import {moduleAllowed} from '@/runtime/module-policy.mjs';
 import {randomUUID} from 'node:crypto';
 import {store, licenceStatus} from '@/runtime/core.mjs';
 import {ApiError, authenticate, permit, hash, transaction, queueChanges} from '@/runtime/integrations.mjs';
@@ -45,7 +46,7 @@ function safeBooking(b:Booking,token:Token) {
   return result;
 }
 function scopeFor(kind:string) { return kind==='housekeeping'?'housekeeping:write':'reservations:write'; }
-export function buildChange(state:State,op:Operation):{next:State;result:Record<string,unknown>} {
+export function buildChange(state:State,op:Operation,housekeepingEnabled=true):{next:State;result:Record<string,unknown>} {
   const next=structuredClone(state), x=op.body;
   let result:Record<string,unknown>={};
   if(op.kind==='housekeeping') {
@@ -70,7 +71,7 @@ export function buildChange(state:State,op:Operation):{next:State;result:Record<
       fields(x,[]);
       if(op.kind==='check-in') {
         if(b!.status!=='Confirmed') error(409,'Only confirmed stays can check in');
-        if(next.rooms.find(r=>r.id===b!.room)?.housekeeping!=='Clean') error(409,'Mark the room clean before check-in');
+        if(housekeepingEnabled&&next.rooms.find(r=>r.id===b!.room)?.housekeeping!=='Clean') error(409,'Mark the room clean before check-in');
         b!.status='Checked in';
       } else if(op.kind==='check-out') {
         if(b!.status!=='Checked in') error(409,'Only checked-in stays can check out');
@@ -86,12 +87,13 @@ export function buildChange(state:State,op:Operation):{next:State;result:Record<
   return {next,result};
 }
 function apply(s:any,action:any,token:Token,actor:string) {
+  const licence=licenceStatus();if(!moduleAllowed(s,licence,'integrations'))error(403,'Integrations are disabled or not licensed');if(action.operation==='housekeeping'&&!moduleAllowed(s,licence,'housekeeping'))error(403,'Housekeeping is disabled or not licensed');
   permit(token,scopeFor(action.operation),action.property_id);
   const {raw,state}=snapshot(s,action.property_id);
   if(hash(raw)!==action.base_version) error(409,'Hotel records changed; submit a fresh request');
-  const {next,result}=buildChange(state,JSON.parse(action.payload));
+  const {next,result}=buildChange(state,JSON.parse(action.payload),moduleAllowed(s,licence,'housekeeping'));
   s.db.prepare('UPDATE property SET data=? WHERE id=?').run(JSON.stringify(next),action.property_id);
-  queueChanges(s,state,next,action.property_id);
+  queueChanges(s,state,next,action.property_id,licence);
   const response={actionId:action.id,status:'applied',...result};
   s.db.prepare("UPDATE api_actions SET status='applied',response=? WHERE id=?").run(JSON.stringify(response),action.id);
   s.audit('api-action-applied',actor,{actionId:action.id,tokenId:token.id,propertyId:action.property_id,operation:action.operation});
@@ -123,7 +125,7 @@ function mutate(s:any,req:Request,token:Token,op:Operation) {
   return transaction(s,()=>{
     const previous=s.db.prepare('SELECT * FROM api_actions WHERE token_id=? AND idempotency_key=?').get(token.id,key);
     if(previous) { if(previous.request_hash!==fingerprint) error(409,'Idempotency-Key was used for another request'); return json(JSON.parse(previous.response),previous.status==='pending'?202:200); }
-    const {raw,state}=snapshot(s,op.propertyId); buildChange(state,op);
+    const {raw,state}=snapshot(s,op.propertyId); buildChange(state,op,moduleAllowed(s,licenceStatus(),'housekeeping'));
     const id=randomUUID(), response={actionId:id,status:'pending',approvalRequired:true};
     s.db.prepare('INSERT INTO api_actions(id,token_id,idempotency_key,request_hash,property_id,operation,payload,base_version,status,created,response) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
       .run(id,token.id,key,fingerprint,op.propertyId,op.kind,JSON.stringify(op),hash(raw),'pending',new Date().toISOString(),JSON.stringify(response));
@@ -150,12 +152,12 @@ export async function handleIntegration(req:Request,path:string[]) {
     if(req.method==='GET') {
       const scope=resource==='rooms'||resource==='availability'?'rooms:read':resource==='reservations'?'reservations:read':resource==='guests'?'guests:read':resource==='reports'?'reports:read':'';
       if(!scope) error(404,'API endpoint not found'); permit(token,scope,propertyId);
-      const {state}=snapshot(s,propertyId), url=new URL(req.url); let result:unknown;
-      if(resource==='rooms' && path.length===3) result={propertyType:propertyType(state),rooms:state.rooms,currency:state.currency};
+      const {state}=snapshot(s,propertyId), url=new URL(req.url),housekeepingEnabled=moduleAllowed(s,licenceStatus(),'housekeeping');const roomView=(r:State['rooms'][number])=>housekeepingEnabled?r:{id:r.id,type:r.type,rate:r.rate}; let result:unknown;
+      if(resource==='rooms' && path.length===3) result={propertyType:propertyType(state),rooms:state.rooms.map(roomView),currency:state.currency};
       else if(resource==='availability' && path.length===3) {
         const arrival=date(url.searchParams.get('arrival')),departure=date(url.searchParams.get('departure'));
         if(departure<=arrival) error(400,'Departure must follow arrival');
-        result={propertyType:propertyType(state),arrival,departure,currency:state.currency,rooms:state.rooms.map(r=>({...r,available:r.housekeeping!=='Out of service'&&!state.bookings.some(b=>active(b)&&b.room===r.id&&b.arrival<departure&&b.departure>arrival)}))};
+        result={propertyType:propertyType(state),arrival,departure,currency:state.currency,rooms:state.rooms.map(r=>({...roomView(r),available:r.housekeeping!=='Out of service'&&!state.bookings.some(b=>active(b)&&b.room===r.id&&b.arrival<departure&&b.departure>arrival)}))};
       } else if(resource==='reservations' && (path.length===3||path.length===4)) {
         const offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||100);
         if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>200) error(400,'Use offset >= 0 and limit 1–200');
@@ -170,7 +172,7 @@ export async function handleIntegration(req:Request,path:string[]) {
         result={guests:[...groups.values()].slice(offset,offset+limit),total:groups.size,offset,limit};
       } else if(resource==='reports' && path.length===4 && path[3]==='daily') {
         const day=date(url.searchParams.get('date')),occupied=state.bookings.filter(b=>active(b)&&b.arrival<=day&&b.departure>day).length;
-        result={date:day,currency:state.currency,rooms:state.rooms.length,reservedRooms:occupied,occupancyPercent:Math.round(occupied/Math.max(1,state.rooms.length)*100),arrivals:state.bookings.filter(b=>b.arrival===day&&b.status==='Confirmed').length,departures:state.bookings.filter(b=>b.departure===day&&b.status==='Checked in').length,dirtyRooms:state.rooms.filter(r=>r.housekeeping==='Dirty').length,outstandingAllStays:state.bookings.filter(b=>b.status!=='Cancelled').reduce((sum,b)=>sum+Math.max(0,nights(b)*b.rate-b.paid),0)};
+        result={date:day,currency:state.currency,rooms:state.rooms.length,reservedRooms:occupied,occupancyPercent:Math.round(occupied/Math.max(1,state.rooms.length)*100),arrivals:state.bookings.filter(b=>b.arrival===day&&b.status==='Confirmed').length,departures:state.bookings.filter(b=>b.departure===day&&b.status==='Checked in').length,...(housekeepingEnabled?{dirtyRooms:state.rooms.filter(r=>r.housekeeping==='Dirty').length}:{}),outstandingAllStays:state.bookings.filter(b=>b.status!=='Cancelled').reduce((sum,b)=>sum+Math.max(0,nights(b)*b.rate-b.paid),0)};
       } else error(404,'API endpoint not found');
       s.audit('api-read','api:'+token.id,{resource,propertyId}); return json(result);
     }
@@ -179,7 +181,7 @@ export async function handleIntegration(req:Request,path:string[]) {
     if(resource==='reservations' && path.length===4 && req.method==='PATCH') kind='update';
     if(resource==='reservations' && path.length===5 && req.method==='POST' && ['check-in','check-out','cancel'].includes(path[4])) kind=path[4];
     if(resource==='rooms' && path.length===5 && path[4]==='housekeeping' && req.method==='PATCH') kind='housekeeping';
-    if(!kind) error(404,'API endpoint not found');
+    if(!kind) error(404,'API endpoint not found');if(kind==='housekeeping'&&!moduleAllowed(s,licenceStatus(),'housekeeping'))error(403,'Housekeeping is disabled or not licensed');
     permit(token,scopeFor(kind),propertyId);
     return mutate(s,req,token,{kind,propertyId,target:path[3],body:await readBody(req)});
   } catch(e) { return apiFailure(e); }

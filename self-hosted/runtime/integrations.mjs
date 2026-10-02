@@ -1,3 +1,4 @@
+import {moduleAllowed} from './module-policy.mjs';
 import {createHash, randomBytes, randomUUID, createHmac} from 'node:crypto';
 import {request as httpsRequest} from 'node:https';
 import {request as httpRequest} from 'node:http';
@@ -39,7 +40,7 @@ export function authenticate(s, request, licence) {
   if (!/^Bearer loomi_[A-Za-z0-9_-]{43}$/.test(bearer)) throw new ApiError(401, 'A Loomi API bearer token is required');
   const row = s.db.prepare('SELECT * FROM api_tokens WHERE token_hash=?').get(hash(bearer.slice(7)));
   if (!row || row.revoked || row.expires <= Date.now()) throw new ApiError(401, 'API token expired or revoked');
-  if (!licence().valid) throw new ApiError(403, 'A valid Loomi licence is required');
+  const licensed=licence();if (!licensed.valid) throw new ApiError(403, 'A valid Loomi licence is required');if(!moduleAllowed(s,licensed,'integrations'))throw new ApiError(403,'Integrations are disabled or not licensed');
   const window = Math.floor(Date.now() / 60000);
   const rate = s.db.prepare('INSERT INTO api_rate_limits VALUES (?,?,1) ON CONFLICT(token_id) DO UPDATE SET window=excluded.window,count=CASE WHEN api_rate_limits.window=excluded.window THEN api_rate_limits.count+1 ELSE 1 END RETURNING count').get(row.id, window);
   if (rate.count > 120) throw new ApiError(429, 'API rate limit reached; retry in one minute');
@@ -79,14 +80,15 @@ export function changeEvents(old, next, propertyId) {
   }
   return events.map(e => ({id:randomUUID(), occurredAt:new Date().toISOString(), propertyId, ...e}));
 }
-export function webhookStatements(s, old, next, propertyId) {
+export function webhookStatements(s, old, next, propertyId,licence={valid:true}) {
+  if(!moduleAllowed(s,licence,'integrations'))return [];
   const subscribers = s.db.prepare('SELECT * FROM webhook_subscriptions WHERE active=1').all().filter(x => JSON.parse(x.property_ids).includes(propertyId));
   if (!subscribers.length) return [];
   const statements = [];
-  for (const event of changeEvents(old, next, propertyId)) for (const sub of subscribers) statements.push(s.prepare('INSERT INTO webhook_deliveries(id,subscription_id,event_id,body,next_attempt,created) VALUES (?,?,?,?,?,?)').bind(randomUUID(), sub.id, event.id, JSON.stringify(event), Date.now(), event.occurredAt));
+  for (const event of changeEvents(old, next, propertyId).filter(e=>e.type!=='housekeeping.updated'||moduleAllowed(s,licence,'housekeeping'))) for (const sub of subscribers) statements.push(s.prepare('INSERT INTO webhook_deliveries(id,subscription_id,event_id,body,next_attempt,created) VALUES (?,?,?,?,?,?)').bind(randomUUID(), sub.id, event.id, JSON.stringify(event), Date.now(), event.occurredAt));
   return statements;
 }
-export function queueChanges(s, old, next, propertyId) { for (const statement of webhookStatements(s, old, next, propertyId)) statement.runSync(); }
+export function queueChanges(s, old, next, propertyId,licence={valid:true}) { for (const statement of webhookStatements(s, old, next, propertyId,licence)) statement.runSync(); }
 export function sendWebhook(url, body, headers) {
   return new Promise((resolve, reject) => {
     const req = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {method:'POST', headers:{...headers, 'Content-Type':'application/json', 'Content-Length':Buffer.byteLength(body)}, timeout:10000}, res => {
@@ -99,10 +101,10 @@ export function sendWebhook(url, body, headers) {
   });
 }
 export async function dispatchOne(s, licence, send = sendWebhook) {
-  if (!licence().valid) return false;
+  const licensed=licence();if(!licensed.valid||!moduleAllowed(s,licensed,'integrations'))return false;
   const delivery = transaction(s, () => {
     s.db.prepare("UPDATE webhook_deliveries SET status='disabled' WHERE status='pending' AND subscription_id IN (SELECT id FROM webhook_subscriptions WHERE active=0)").run();
-    const row = s.db.prepare("SELECT d.*,w.url,w.secret FROM webhook_deliveries d JOIN webhook_subscriptions w ON w.id=d.subscription_id WHERE d.status='pending' AND w.active=1 AND d.next_attempt<=? AND d.lease_until<=? ORDER BY d.next_attempt LIMIT 1").get(Date.now(), Date.now());
+    const row = s.db.prepare("SELECT d.*,w.url,w.secret FROM webhook_deliveries d JOIN webhook_subscriptions w ON w.id=d.subscription_id WHERE d.status='pending' AND w.active=1 AND d.next_attempt<=? AND d.lease_until<=? AND (?=1 OR json_extract(d.body,'$.type')<>'housekeeping.updated') ORDER BY d.next_attempt LIMIT 1").get(Date.now(), Date.now(),moduleAllowed(s,licensed,'housekeeping')?1:0);
     if (row) s.db.prepare('UPDATE webhook_deliveries SET lease_until=? WHERE id=?').run(Date.now() + 30000, row.id);
     return row;
   });

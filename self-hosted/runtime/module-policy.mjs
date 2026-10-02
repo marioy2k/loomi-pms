@@ -1,0 +1,4 @@
+export const moduleNames=['housekeeping','accounting','pos','swimming','inventory','integrations'];
+export function licensedModules(licence){const modules=licence.modules===undefined?moduleNames:licence.modules;if(!Array.isArray(modules)||modules.some(k=>!moduleNames.includes(k))||new Set(modules).size!==modules.length)throw Error('Invalid licensed modules');return [...modules];}
+export function effectiveModules(s,licence){if(!licence.valid)return [];const allowed=licensedModules(licence),row=s.db.prepare('SELECT disabled FROM company_modules WHERE id=1').get(),disabled=row?JSON.parse(row.disabled):[];if(!Array.isArray(disabled)||disabled.some(k=>!moduleNames.includes(k)))throw Error('Invalid company feature settings');return allowed.filter(k=>!disabled.includes(k));}
+export function moduleAllowed(s,licence,key){return effectiveModules(s,licence).includes(key);}

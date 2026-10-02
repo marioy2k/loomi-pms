@@ -1,3 +1,4 @@
+import {moduleEnabled} from '@/lib/modules';
 import {Access,can} from '@/lib/permissions';
 import {Company,companyHeader} from '@/lib/company';
 import {validLogo} from '@/lib/logo';
@@ -9,6 +10,6 @@ export function voucherStatus(v:SwimmingVoucher,today=posDay()){return v.status=
 export function voucherText(v:SwimmingVoucher,property:string,company?:Partial<Company>){return [...companyHeader(company,property),'','SWIMMING DAY PASS',v.code,'Valid date: '+v.valid_date,'Guest / group: '+v.guest,`Adults: ${v.adults} · Children: ${v.children}`,`Total: ${v.currency} ${(v.total/100).toFixed(2)}`,'Status: '+voucherStatus(v),'Payment: '+(v.paid?v.method:'Not paid'),'',v.status==='cancelled'?'CANCELLED — NOT VALID FOR ENTRY.':v.status==='redeemed'?'ALREADY REDEEMED — NOT VALID FOR ANOTHER ENTRY.':v.valid_date<posDay()?'EXPIRED — NOT VALID FOR ENTRY.':v.paid?'Present this voucher at the swimming pool. Valid for one entry for the entire group on the date above.':'PAYMENT REQUIRED BEFORE ENTRY.',...(v.redeemed_at?['Redeemed: '+v.redeemed_at]:[]),...(v.instructions?['','Pool information',v.instructions]:[]),...(company?.receiptFooter?['',company.receiptFooter]:[]),''].join('\n');}
 export function voucherHTML(v:SwimmingVoucher,property:string,company?:Partial<Company>){const escape=(s:string)=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');const logo=company?.logo;return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(v.code)}</title><style>body{font:16px/1.6 Arial,sans-serif;margin:40px auto;padding:24px;max-width:600px;border:2px solid #ddd}img{max-width:200px;max-height:110px;object-fit:contain}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}@media print{body{margin:0;border:0}}</style></head><body>${logo&&validLogo(logo)?`<img src="${logo}" alt="Company logo">`:''}<pre>${escape(voucherText(v,property,company))}</pre></body></html>`;}
 
-export const canSellPasses=(a:Access|null)=>can(a,'dayPasses')||can(a,'pos')||can(a,'payments');
-export const canManagePasses=(a:Access|null)=>can(a,'posManage')||can(a,'property')||can(a,'payments');
+export const canSellPasses=(a:Access|null)=>moduleEnabled(a,'swimming')&&(can(a,'dayPasses')||can(a,'pos')||can(a,'payments'));
+export const canManagePasses=(a:Access|null)=>moduleEnabled(a,'swimming')&&(can(a,'posManage')||can(a,'property')||can(a,'payments'));
 export const canViewPasses=(a:Access|null)=>canSellPasses(a)||canManagePasses(a)||can(a,'passCheck');

@@ -1,9 +1,10 @@
+import {moduleEnabled} from '@/lib/modules';
 import {access} from '@/lib/access';
 import {store,checkOrigin} from '@/runtime/core.mjs';
 import {ApiError,createToken,createWebhook,scopeLabels,transaction} from '@/runtime/integrations.mjs';
 import {apiFailure,decideAction,readBody} from '@/lib/integration-api';
 export const dynamic='force-dynamic';
-async function owner(){const user=await access();if(!user||user.role!=='owner')throw new ApiError(403,'Owner access required');return user;}
+async function owner(){const user=await access();if(!user||user.role!=='owner')throw new ApiError(403,'Owner access required');if(!moduleEnabled(user,'integrations'))throw new ApiError(403,'Integrations are disabled or not licensed');return user;}
 export async function GET(){try{await owner();const s=store();return Response.json({
  scopes:scopeLabels,
  tokens:s.db.prepare('SELECT id,name,scopes,property_ids,expires,approval_required,revoked,created,last_used FROM api_tokens ORDER BY created DESC').all(),
