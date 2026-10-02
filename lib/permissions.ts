@@ -1,4 +1,4 @@
-export const permissionLabels={reservations:'Create and update reservations',payments:'Manage accounting, payments and booking rates',housekeeping:'Update housekeeping status',rooms:'Manage rooms and standard rates',property:'Edit hotel name and currency'};
+export const permissionLabels={pos:'Use POS and take payments',posManage:'Manage POS products, refunds and daily closing',reservations:'Create and update reservations',payments:'Manage accounting, payments and booking rates',housekeeping:'Update housekeeping status',rooms:'Manage rooms and standard rates',property:'Edit hotel name and currency'};
 export type Permission=keyof typeof permissionLabels;
 export type Access={email:string;name:string;role:'owner'|'admin'|'employee';permissions:Permission[];propertyIds:number[]|null};
 export type Staff=Access&{active:boolean};
