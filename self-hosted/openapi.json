@@ -2032,7 +2032,8 @@
             "maxLength": 50
           },
           "room": {
-            "type": "string"
+            "type": "string",
+            "description": "Required for hotels. May be omitted for a whole-house rental; defaults to HOUSE."
           },
           "arrival": {
             "type": "string",
@@ -2049,7 +2050,6 @@
         },
         "required": [
           "guest",
-          "room",
           "arrival",
           "departure"
         ]

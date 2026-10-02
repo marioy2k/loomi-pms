@@ -18,7 +18,7 @@ test('production integration API: scoping, approvals, idempotency, conflicts, br
   assert.equal((await browser('/api/license',{payload:bytes.toString('base64url'),signature:sign(null,bytes,keys.privateKey).toString('base64url')})).status,200);
   let x=await(await browser('/api/pms')).json();const state={...x.state,rooms:[{id:'101',type:'Standard',rate:100,housekeeping:'Clean'},{id:'102',type:'Twin',rate:80,housekeeping:'Clean'}]};
   assert.equal((await browser('/api/pms?propertyId=1',{state,previous:JSON.stringify(x.state)})).status,200);
-  await bodyStatus(await browser('/api/properties',{name:'Other',currency:'USD'}),201);
+  await bodyStatus(await browser('/api/properties',{name:'Other house',currency:'USD',propertyType:'house'}),201);
   await bodyStatus(await browser('/api/integrations',{action:'create-webhook',name:'n8n events',url:'https://n8n.example/webhook/test',propertyIds:[1]}),201);
   const read=await create(['rooms:read','reservations:read','reports:read']);
   await bodyStatus(await api('properties/2/rooms'),403);await bodyStatus(await api('properties/1/guests'),403);
@@ -59,6 +59,23 @@ test('production integration API: scoping, approvals, idempotency, conflicts, br
   // Employee sessions cannot issue integration tokens or approve changes.
   await bodyStatus(await browser('/api/staff',{email:'cleaner@example.com',password:'cleaner-password-123',name:'Cleaner',role:'employee',active:true,propertyIds:[1],permissions:['housekeeping']}),200);
   r=await browser('/api/login',{email:'cleaner@example.com',password:'cleaner-password-123'});const ownerCookie=cookie;cookie=r.headers.get('set-cookie').split(';')[0];await bodyStatus(await browser('/api/integrations'),403);await bodyStatus(await browser('/api/integrations',{action:'approve',id:stale.actionId}),403);cookie=ownerCookie;
+  let house=(await bodyStatus(await browser('/api/pms?propertyId=2'),200)).state;
+  assert.equal(house.propertyType,'house');assert.equal(house.rooms.length,1);assert.equal(house.rooms[0].id,'HOUSE');
+  const original=JSON.stringify(house);
+  await bodyStatus(await browser('/api/pms?propertyId=2',{state:{...house,rooms:[...house.rooms,{id:'bedroom',type:'Bedroom',rate:10,housekeeping:'Clean'}]},previous:original}),400);
+  await bodyStatus(await browser('/api/pms?propertyId=2',{state:{...house,propertyType:'hotel'},previous:original}),400);
+  house.rooms[0].rate=150;await bodyStatus(await browser('/api/pms?propertyId=2',{state:house,previous:original}),200);
+  const ht=await bodyStatus(await browser('/api/integrations',{action:'create-token',name:'House assistant',scopes:['rooms:read','reservations:write','housekeeping:write'],propertyIds:[2],approvalRequired:false,expiresAt:new Date(Date.now()+86400000).toISOString()}),201);
+  token=ht.token;
+  const hb=await bodyStatus(await api('properties/2/reservations','POST',{guest:'House Guest',arrival:'2026-11-01',departure:'2026-11-04'},'house-book-01'),201);
+  await bodyStatus(await api('properties/2/reservations','POST',{guest:'Overlapping Guest',arrival:'2026-11-02',departure:'2026-11-05'},'house-book-02'),409);
+  const ha=await bodyStatus(await api('properties/2/availability?arrival=2026-11-02&departure=2026-11-03'),200);assert.equal(ha.propertyType,'house');assert.equal(ha.rooms.length,1);assert.equal(ha.rooms[0].available,false);
+  const free=await bodyStatus(await api('properties/2/availability?arrival=2026-11-04&departure=2026-11-05'),200);assert.equal(free.rooms[0].available,true);
+  await bodyStatus(await api('properties/2/rooms/bedroom/housekeeping','PATCH',{status:'Clean'},'house-room-01'),404);
+  await bodyStatus(await api('properties/2/reservations/'+hb.bookingId+'/check-in','POST',{},'house-checkin'),200);
+  await bodyStatus(await api('properties/2/reservations/'+hb.bookingId+'/check-out','POST',{},'house-checkout'),200);
+  const hr=await bodyStatus(await api('properties/2/rooms'),200);assert.equal(hr.rooms[0].housekeeping,'Dirty');
+  token=read.token;
   const db=new DatabaseSync(join(dir,'loomi.sqlite'));db.prepare("UPDATE settings SET value='{}' WHERE key='licence'").run();db.close();
   await bodyStatus(await api('properties/1/rooms'),403);
  }finally{if(child.exitCode===null){child.kill();await new Promise(r=>{child.once('exit',r);setTimeout(r,1000)})}rmSync(dir,{recursive:true,force:true});}

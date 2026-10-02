@@ -130,3 +130,7 @@ Delivery is **at least once**: deduplicate accepted `X-Loomi-Event-Id` values in
 Database backups contain webhook signing secrets as well as guest records. Restrict and encrypt backups. API action/read and administrative events are recorded in Loomi's audit table; tokens and webhook signing secrets are excluded from audit entries. The existing interface does not expose a full audit viewer.
 
 Machine-readable API reference: [`openapi.json`](openapi.json). There is no dedicated n8n connector; use HTTP Request nodes or HTTP tools in your agent workflow. Configure and test actual n8n workflows after server deployment.
+
+## Hotel and house properties
+
+Owners select Hotel or House when creating a property. Existing properties default to Hotel. A house has one fixed `HOUSE` accommodation unit, a whole-house nightly rate and one cleaning status. Property type cannot be changed after creation. The properties, rooms and availability responses include `propertyType`. For a house, reservation creation may omit `room`; Loomi uses the whole house. Rooms cannot be added to houses, and overlapping active house reservations are rejected.

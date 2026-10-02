@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {store, licenceStatus} from '@/runtime/core.mjs';
 import {ApiError, authenticate, permit, hash, transaction, queueChanges} from '@/runtime/integrations.mjs';
-import {Booking, State, validateState, nights} from '@/lib/pms';
+import {Booking, State, isHouse, propertyType, validateState, nights} from '@/lib/pms';
 import {guestKey} from '@/lib/guests';
 
 type Token = {id:string; scopes:string[]; propertyIds:number[]; approval_required:number};
@@ -55,7 +55,7 @@ export function buildChange(state:State,op:Operation):{next:State;result:Record<
     room!.housekeeping=String(x.status); result={roomId:room!.id,housekeepingStatus:room!.housekeeping};
   } else if(op.kind==='create') {
     fields(x,['guest','email','phone','room','arrival','departure','notes']);
-    const room=next.rooms.find(r=>r.id===x.room); if(!room || room.housekeeping==='Out of service') error(409,'Room unavailable');
+    const room=next.rooms.find(r=>r.id===(isHouse(next)&&x.room===undefined?'HOUSE':x.room)); if(!room || room.housekeeping==='Out of service') error(409,'Room unavailable');
     const b:Booking={id:'LM-'+randomUUID(),guestId:randomUUID(),guest:text(x.guest,200,true),email:x.email===undefined?'':text(x.email,254),phone:x.phone===undefined?'':text(x.phone,50),room:room!.id,arrival:date(x.arrival),departure:date(x.departure),notes:x.notes===undefined?'':text(x.notes,2000),status:'Confirmed',rate:room!.rate,paid:0};
     next.bookings.push(b); result={bookingId:b.id,bookingStatus:b.status};
   } else {
@@ -65,7 +65,7 @@ export function buildChange(state:State,op:Operation):{next:State;result:Record<
       if(!active(b!)) error(409,'Only active reservations can be edited');
       for(const key of ['guest','email','phone','notes'] as const) if(x[key]!==undefined) b![key]=text(x[key],key==='notes'?2000:key==='email'?254:key==='phone'?50:200,key==='guest');
       for(const key of ['arrival','departure'] as const) if(x[key]!==undefined) b![key]=date(x[key]);
-      if(x.room!==undefined) { const room=next.rooms.find(r=>r.id===x.room); if(!room || room.housekeeping==='Out of service') error(409,'Room unavailable'); if(room!.id!==b!.room){b!.room=room!.id;b!.rate=room!.rate;} }
+      if(x.room!==undefined) { const room=next.rooms.find(r=>r.id===(isHouse(next)&&x.room===undefined?'HOUSE':x.room)); if(!room || room.housekeeping==='Out of service') error(409,'Room unavailable'); if(room!.id!==b!.room){b!.room=room!.id;b!.rate=room!.rate;} }
     } else {
       fields(x,[]);
       if(op.kind==='check-in') {
@@ -137,7 +137,7 @@ export async function handleIntegration(req:Request,path:string[]) {
   try {
     const s=store(), token=authenticate(s,req,licenceStatus) as Token;
     if(path.length===1 && path[0]==='properties' && req.method==='GET') {
-      const properties=s.db.prepare("SELECT id,json_extract(data,'$.hotel') AS name FROM property ORDER BY id").all().filter((p:any)=>token.propertyIds.includes(p.id));
+      const properties=s.db.prepare("SELECT id,json_extract(data,'$.hotel') AS name,COALESCE(json_extract(data,'$.propertyType'),'hotel') AS propertyType FROM property ORDER BY id").all().filter((p:any)=>token.propertyIds.includes(p.id));
       s.audit('api-read','api:'+token.id,{resource:'properties'}); return json({properties});
     }
     if(path.length===2 && path[0]==='actions' && req.method==='GET') {
@@ -151,11 +151,11 @@ export async function handleIntegration(req:Request,path:string[]) {
       const scope=resource==='rooms'||resource==='availability'?'rooms:read':resource==='reservations'?'reservations:read':resource==='guests'?'guests:read':resource==='reports'?'reports:read':'';
       if(!scope) error(404,'API endpoint not found'); permit(token,scope,propertyId);
       const {state}=snapshot(s,propertyId), url=new URL(req.url); let result:unknown;
-      if(resource==='rooms' && path.length===3) result={rooms:state.rooms,currency:state.currency};
+      if(resource==='rooms' && path.length===3) result={propertyType:propertyType(state),rooms:state.rooms,currency:state.currency};
       else if(resource==='availability' && path.length===3) {
         const arrival=date(url.searchParams.get('arrival')),departure=date(url.searchParams.get('departure'));
         if(departure<=arrival) error(400,'Departure must follow arrival');
-        result={arrival,departure,currency:state.currency,rooms:state.rooms.map(r=>({...r,available:r.housekeeping!=='Out of service'&&!state.bookings.some(b=>active(b)&&b.room===r.id&&b.arrival<departure&&b.departure>arrival)}))};
+        result={propertyType:propertyType(state),arrival,departure,currency:state.currency,rooms:state.rooms.map(r=>({...r,available:r.housekeeping!=='Out of service'&&!state.bookings.some(b=>active(b)&&b.room===r.id&&b.arrival<departure&&b.departure>arrival)}))};
       } else if(resource==='reservations' && (path.length===3||path.length===4)) {
         const offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||100);
         if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>200) error(400,'Use offset >= 0 and limit 1–200');
