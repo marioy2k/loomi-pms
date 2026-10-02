@@ -3,6 +3,7 @@ import {Access,can,Permission} from '@/lib/permissions';
 export function authorizeUpdate(a:Access,old:State,next:State){
  if(propertyType(old)!==propertyType(next))throw Error('Property type cannot be changed after creation');
  const deny=(permission:Permission)=>{if(!can(a,permission))throw Error('You do not have permission to make this change.');};
+ if(old.currency!==next.currency&&old.bookings.length)throw Error('Currency cannot be changed after reservations exist. Create a separate property for another currency.');
  if(old.hotel!==next.hotel||old.currency!==next.currency)deny('property');
  const roomDetails=(s:State)=>s.rooms.map(({housekeeping,...r})=>r);
  if(JSON.stringify(roomDetails(old))!==JSON.stringify(roomDetails(next)))deny(isHouse(old)?'property':'rooms');

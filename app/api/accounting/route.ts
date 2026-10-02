@@ -2,6 +2,23 @@ import {requestedProperty} from '@/lib/properties';
 import {database} from '@/db/raw';
 import {access} from '@/lib/access';
 import {can,canAccessProperty} from '@/lib/permissions';
-import {initializeLedger,Transaction} from '@/lib/ledger';
-export async function GET(req:Request){try{const user=await access();if(!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});const propertyId=requestedProperty(req);if(!canAccessProperty(user,propertyId))return Response.json({error:'You do not have access to this property'},{status:403});const db=database();const row=await db.prepare('SELECT data FROM property WHERE id=?').bind(propertyId).first<{data:string}>();if(!row)return Response.json({error:'Property not found'},{status:404});await initializeLedger(db,JSON.parse(row.data),propertyId);const result=await db.prepare('SELECT * FROM transactions WHERE property_id=? ORDER BY created DESC,id DESC').bind(propertyId).all<Transaction>();return Response.json({transactions:result.results});}catch(e){console.error(e);return Response.json({error:'Unable to load accounting records. Please retry.'},{status:503});}}
-export async function POST(req:Request){try{const user=await access();if(!user||!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});if(req.headers.get('origin')&&new URL(req.url).origin!==req.headers.get('origin'))return Response.json({error:'Invalid request'},{status:403});const propertyId=requestedProperty(req);if(!canAccessProperty(user,propertyId))return Response.json({error:'You do not have access to this property'},{status:403});const db=database();if(!await db.prepare('SELECT id FROM property WHERE id=?').bind(propertyId).first())return Response.json({error:'Property not found'},{status:404});const x=await req.json() as {id:string;date:string;kind:string;method:string;amount:number;currency:string;description:string};if(!/^[a-f0-9-]{36}$/.test(x.id)||!['Income','Expense'].includes(x.kind)||!['Cash','Card'].includes(x.method)||!['USD','SRD','EUR'].includes(x.currency)||!Number.isFinite(x.amount)||x.amount<=0||x.amount>1e9||!/^\d{4}-\d{2}-\d{2}$/.test(x.date)||!Number.isFinite(Date.parse(x.date))||!x.description?.trim())return Response.json({error:'Enter a valid date, amount and description'},{status:400});await database().prepare('INSERT OR IGNORE INTO transactions (property_id,id,date,created,kind,method,amount,currency,booking,guest,description,actor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').bind(propertyId,x.id,x.date,new Date().toISOString(),x.kind,x.method,Math.round(x.amount*100)*(x.kind==='Expense'?-1:1),x.currency,'','',x.description.trim(),user.email).run();return Response.json({saved:true});}catch(e){console.error(e);return Response.json({error:'Unable to record transaction'},{status:503});}}
+import {initializeLedger} from '@/lib/ledger';
+import {saveAccounting,accountingError} from '@/lib/accounting-service';
+export async function GET(req:Request){try{
+ const user=await access();if(!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
+ const db=database();const all=new URL(req.url).searchParams.get('scope')==='all',id=requestedProperty(req);
+ if(!all&&!canAccessProperty(user,id))return Response.json({error:'Property access denied'},{status:403});
+ const list=await db.prepare('SELECT id,data FROM property ORDER BY id').all<{id:number;data:string}>();const allowed=list.results.filter(p=>canAccessProperty(user,p.id)&&(all||p.id===id));
+ if(!allowed.length)return Response.json({error:'No accessible property found'},{status:404});
+ for(const p of allowed)await initializeLedger(db,JSON.parse(p.data),p.id);
+ const placeholders=allowed.map(()=>'?').join(','),ids=allowed.map(p=>p.id);
+ const result=await db.batch([db.prepare(`SELECT id,data FROM property WHERE id IN (${placeholders}) ORDER BY id`).bind(...ids),db.prepare(`SELECT * FROM transactions WHERE property_id IN (${placeholders}) ORDER BY date DESC,created DESC,id DESC`).bind(...ids),db.prepare(`SELECT * FROM accounting_records WHERE property_id IN (${placeholders}) ORDER BY date DESC,created DESC`).bind(...ids)]);
+ const properties=result[0].results.map((p:any)=>{const state=JSON.parse(p.data);return {id:p.id,state:{...state,bookings:state.bookings.map(({identification,notes,...b}:any)=>({...b,notes:''}))}}});
+ return Response.json({transactions:result[1].results,records:result[2].results,properties});
+ }catch(e){console.error(e);return Response.json({error:'Unable to load accounting records. Please retry.'},{status:503});}}
+export async function POST(req:Request){try{
+ const user=await access();if(!user||!can(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
+ if(req.headers.get('origin')&&new URL(req.url).origin!==req.headers.get('origin'))return Response.json({error:'Invalid request origin'},{status:403});
+ const propertyId=requestedProperty(req);if(!canAccessProperty(user,propertyId))return Response.json({error:'Property access denied'},{status:403});
+ return Response.json(await saveAccounting(database(),propertyId,await req.json(),user.email));
+ }catch(e){console.error(e);return accountingError(e);}}
