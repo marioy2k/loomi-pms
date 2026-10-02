@@ -7,7 +7,7 @@ import {randomUUID} from 'node:crypto';
 import ts from 'typescript';
 import {Store} from '../runtime/core.mjs';
 const dir=mkdtempSync(join(tmpdir(),'loomi-accounting-'));
-for(const name of ['pms','accounting-reports','accounting-service']){const src=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8').replaceAll("@/lib/pms",'./pms.mjs').replaceAll('@/lib/accounting-reports','./accounting-reports.mjs');writeFileSync(join(dir,name+'.mjs'),ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText);}
+for(const name of ['company','pms','accounting-reports','accounting-service']){const src=readFileSync(new URL('../lib/'+name+'.ts',import.meta.url),'utf8').replaceAll('@/lib/company','./company.mjs').replaceAll("@/lib/pms",'./pms.mjs').replaceAll('@/lib/accounting-reports','./accounting-reports.mjs');writeFileSync(join(dir,name+'.mjs'),ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText);}
 const {buildReports}=await import(join(dir,'accounting-reports.mjs'));
 const {saveAccounting}=await import(join(dir,'accounting-service.mjs'));
 process.on('exit',()=>rmSync(dir,{recursive:true,force:true}));

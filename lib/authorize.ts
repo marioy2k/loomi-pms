@@ -4,7 +4,7 @@ export function authorizeUpdate(a:Access,old:State,next:State){
  if(propertyType(old)!==propertyType(next))throw Error('Property type cannot be changed after creation');
  const deny=(permission:Permission)=>{if(!can(a,permission))throw Error('You do not have permission to make this change.');};
  if(old.currency!==next.currency&&old.bookings.length)throw Error('Currency cannot be changed after reservations exist. Create a separate property for another currency.');
- if(old.hotel!==next.hotel||old.currency!==next.currency)deny('property');
+ if(old.hotel!==next.hotel||old.currency!==next.currency||JSON.stringify(old.company)!==JSON.stringify(next.company)||JSON.stringify(old.appearance)!==JSON.stringify(next.appearance))deny('property');
  const roomDetails=(s:State)=>s.rooms.map(({housekeeping,...r})=>r);
  if(JSON.stringify(roomDetails(old))!==JSON.stringify(roomDetails(next)))deny(isHouse(old)?'property':'rooms');
  for(const r of next.rooms){const before=old.rooms.find(x=>x.id===r.id);if(before&&r.housekeeping!==before.housekeeping){const checkout=can(a,'reservations')&&r.housekeeping==='Dirty'&&next.bookings.some(b=>b.room===r.id&&b.status==='Checked out'&&old.bookings.some(o=>o.id===b.id&&o.status==='Checked in'));if(!checkout)deny('housekeeping');}}
