@@ -1,0 +1,40 @@
+import {DatabaseSync} from 'node:sqlite';
+import {createPrivateKey,createPublicKey,sign,createHash,randomUUID} from 'node:crypto';
+import {mkdirSync,chmodSync} from 'node:fs';
+import {dirname} from 'node:path';
+export const modules={housekeeping:'Housekeeping',accounting:'Accounting',pos:'Point of sale',swimming:'Swimming passes',inventory:'Inventory',integrations:'Integrations & AI'};
+export class Problem extends Error{constructor(status,message){super(message);this.status=status}}
+const fail=(status,message)=>{throw new Problem(status,message)};
+export const sha=value=>createHash('sha256').update(value).digest('hex');
+const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
+const text=(value,max,required=true)=>typeof value==='string'&&value.length<=max&&(!required||!!value.trim());
+function fields(x,keys){if(!x||typeof x!=='object'||Array.isArray(x)||Object.keys(x).some(k=>!keys.includes(k)))fail(400,'Unsupported request fields')}
+export function expiryFor(term,start){if(term==='permanent')return null;const d=new Date(start),day=d.getUTCDate();d.setUTCDate(1);if(term==='monthly')d.setUTCMonth(d.getUTCMonth()+1);else d.setUTCFullYear(d.getUTCFullYear()+1);const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d.toISOString()}
+export class Issuer{
+ constructor(path,keyBytes,actor){this.actor=actor;this.key=createPrivateKey(keyBytes);if(this.key.asymmetricKeyType!=='ed25519')throw Error('The signing key must be Ed25519');this.publicKey=createPublicKey(this.key).export({type:'spki',format:'pem'});this.fingerprint=sha(createPublicKey(this.key).export({type:'spki',format:'der'}));mkdirSync(dirname(path),{recursive:true,mode:0o700});this.db=new DatabaseSync(path);chmodSync(path,0o600);this.db.exec(`PRAGMA journal_mode=WAL;PRAGMA foreign_keys=ON;PRAGMA busy_timeout=5000;
+ CREATE TABLE IF NOT EXISTS customers(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL,version INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS licences(id TEXT PRIMARY KEY,customer_id TEXT NOT NULL REFERENCES customers(id),installation_id TEXT NOT NULL,company TEXT NOT NULL,term TEXT NOT NULL,max_properties INTEGER NOT NULL,modules TEXT NOT NULL,created TEXT NOT NULL,expires TEXT,renewal_of TEXT REFERENCES licences(id),envelope TEXT NOT NULL,request_hash TEXT NOT NULL);
+ CREATE INDEX IF NOT EXISTS idx_licences_installation ON licences(installation_id);
+ CREATE UNIQUE INDEX IF NOT EXISTS idx_licences_replacement ON licences(renewal_of) WHERE renewal_of IS NOT NULL;
+ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,event TEXT NOT NULL,actor TEXT NOT NULL,created TEXT NOT NULL,details TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,expires INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);`)}
+ transaction(work){this.db.exec('BEGIN IMMEDIATE');try{const result=work();this.db.exec('COMMIT');return result}catch(e){this.db.exec('ROLLBACK');throw e}}
+ audit(event,details={}){this.db.prepare('INSERT INTO audit(event,actor,created,details) VALUES (?,?,?,?)').run(event,this.actor,new Date().toISOString(),JSON.stringify(details))}
+ customer(x){fields(x,['id','name','email','previous']);if(!uuid(x.id)||!text(x.name,150)||!text(x.email,254,false)||x.email&& !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.email)||!Number.isSafeInteger(x.previous)||x.previous<0)fail(400,'Enter a company name and a valid optional email');return this.transaction(()=>{const old=this.db.prepare('SELECT * FROM customers WHERE id=?').get(x.id),now=new Date().toISOString();if(old){if(old.version!==x.previous)fail(409,'Customer changed. Refresh before editing');this.db.prepare('UPDATE customers SET name=?,email=?,updated=?,version=version+1 WHERE id=?').run(x.name.trim(),x.email.trim(),now,x.id)}else{if(x.previous!==0)fail(409,'Customer does not exist');this.db.prepare('INSERT INTO customers VALUES (?,?,?,?,?,1)').run(x.id,x.name.trim(),x.email.trim(),now,now)}this.audit(old?'customer-updated':'customer-created',{customerId:x.id});return this.db.prepare('SELECT * FROM customers WHERE id=?').get(x.id)})}
+ issue(x,now=new Date()){
+  fields(x,['requestId','customerId','installationId','term','maxProperties','modules','renewalOf']);if(!uuid(x.requestId)||!uuid(x.customerId)||!uuid(x.installationId)||!['monthly','yearly','permanent'].includes(x.term)||!Number.isSafeInteger(x.maxProperties)||x.maxProperties<1||x.maxProperties>10000||!Array.isArray(x.modules)||x.modules.some(k=>!Object.hasOwn(modules,k))||new Set(x.modules).size!==x.modules.length||x.renewalOf!==null&&!uuid(x.renewalOf))fail(400,'Check the installation ID, licence term, property limit and modules');
+  const ordered=Object.keys(modules).filter(k=>x.modules.includes(k)),fingerprint=sha(JSON.stringify({...x,modules:ordered}));
+  return this.transaction(()=>{const prior=this.db.prepare('SELECT * FROM licences WHERE id=?').get(x.requestId);if(prior){if(prior.request_hash!==fingerprint)fail(409,'This request ID was used for different licence details');return this.record(prior)}const customer=this.db.prepare('SELECT * FROM customers WHERE id=?').get(x.customerId);if(!customer)fail(404,'Customer not found');
+   const current=this.db.prepare('SELECT l.* FROM licences l WHERE installation_id=? AND NOT EXISTS (SELECT 1 FROM licences n WHERE n.renewal_of=l.id)').get(x.installationId);let previous=null;
+   if(current){if(current.customer_id!==x.customerId)fail(409,'This installation belongs to another customer');if(x.renewalOf!==current.id)fail(409,'This installation already has a licence. Replace its latest licence')}else if(x.renewalOf!==null)fail(409,'Replacement licence must use the same customer and installation');
+   if(x.renewalOf){previous=this.db.prepare('SELECT * FROM licences WHERE id=?').get(x.renewalOf);if(!previous||previous.customer_id!==x.customerId||previous.installation_id!==x.installationId)fail(409,'Replacement licence must use the same customer and installation')}
+   const created=now.toISOString(),start=previous?.expires&&Date.parse(previous.expires)>now.getTime()?new Date(previous.expires):now,expires=expiryFor(x.term,start),claims={product:'Loomi PMS',licenceId:x.requestId,installationId:x.installationId,company:customer.name,term:x.term,maxProperties:x.maxProperties,modules:ordered,issuedAt:created,expiresAt:expires};const bytes=Buffer.from(JSON.stringify(claims)),envelope=JSON.stringify({payload:bytes.toString('base64url'),signature:sign(null,bytes,this.key).toString('base64url')},null,2);
+   this.db.prepare('INSERT INTO licences VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(x.requestId,x.customerId,x.installationId,customer.name,x.term,x.maxProperties,JSON.stringify(ordered),created,expires,x.renewalOf,envelope,fingerprint);
+   this.audit(previous?'licence-replaced':'licence-issued',{licenceId:x.requestId,customerId:x.customerId,installationId:x.installationId,modules:ordered,term:x.term,renewalOf:x.renewalOf});return this.record(this.db.prepare('SELECT * FROM licences WHERE id=?').get(x.requestId));})
+ }
+ record(row){const {envelope,request_hash,...safe}=row;return {...safe,modules:JSON.parse(row.modules)}}
+ overview(){return {customers:this.db.prepare('SELECT * FROM customers ORDER BY name COLLATE NOCASE').all(),licences:this.db.prepare('SELECT * FROM licences ORDER BY created DESC,rowid DESC').all().map(r=>this.record(r)),audit:this.db.prepare('SELECT event,actor,created,details FROM audit ORDER BY id DESC LIMIT 100').all(),modules,issuer:{email:this.actor,fingerprint:this.fingerprint}}}
+ download(id){if(!uuid(id))fail(400,'Invalid licence reference');const row=this.db.prepare('SELECT * FROM licences WHERE id=?').get(id);if(!row)fail(404,'Licence not found');this.audit('licence-downloaded',{licenceId:id});return {body:row.envelope,filename:'loomi-'+id+'.json'}}
+ close(){this.db.close()}
+}

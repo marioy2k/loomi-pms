@@ -1,0 +1,7 @@
+.env
+secrets/
+data/
+backups/
+*.sqlite*
+*.pem
+node_modules/

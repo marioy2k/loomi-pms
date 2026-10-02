@@ -1,0 +1,8 @@
+.git
+.env
+secrets
+data
+backups
+test
+*.sqlite*
+*.pem

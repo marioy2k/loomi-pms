@@ -1,0 +1,2 @@
+import {DatabaseSync,backup} from 'node:sqlite';import {existsSync,chmodSync} from 'node:fs';import {join} from 'node:path';
+const target=process.argv[2],source=join(process.env.DATA_DIR||'data','issuer.sqlite');if(!target||!existsSync(source)||existsSync(target))throw Error('Pass a new backup filename and ensure the source database exists');const db=new DatabaseSync(source,{readOnly:true});try{await backup(db,target);chmodSync(target,0o600);console.log('Issuer database backed up. Signing key must be backed up separately.')}finally{db.close()}
