@@ -112,3 +112,7 @@ Node production build, password/session tests, licence signature/expiry tests an
 
 Powered by Bitwise MSP — +5977238113 — support@bitwisesr.com.
 
+
+## Super-admin hotel data reset
+
+Settings / Reset data clears rooms, reservations (including guest identification and history), and accounting transactions across all properties. Only the installation owner can call this endpoint. The confirmation phrase is `RESET ALL HOTEL DATA`. Property names/currencies, accounts, staff permissions, installation ID, licence and audit history remain. Back up before use; the app has no undo. Reset is transactional, is audited, and retains ledger initialization markers to prevent stale accounting requests from re-importing opening balances. Other open sessions must reload.
