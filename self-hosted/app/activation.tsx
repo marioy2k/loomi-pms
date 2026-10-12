@@ -1,10 +1,12 @@
 'use client';
+import LoomiBrand from './loomi-brand';
 import LicenseSettings from './license-settings';
 import SupportFooter from './support-footer';
 
 export default function Activation({license, superAdmin = false}: {license: {error?: string; installationId: string}; superAdmin?: boolean}) {
   return <>
     <main className="loading">
+      <LoomiBrand/>
       <h1>Activate Loomi PMS</h1>
       <p>{license.error || 'A valid licence is required.'}</p>
       <p>Installation ID: <code>{license.installationId}</code></p>

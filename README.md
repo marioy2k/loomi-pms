@@ -1,3 +1,7 @@
+![Loomi logo](public/loomi-logo.png)
+
+*Loomi: Turn on the brilliant way to manage stays.*
+
 # Loomi PMS
 
 Hotel property management by Bitwise MSP.

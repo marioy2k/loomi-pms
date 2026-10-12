@@ -3,10 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Loomi PMS",
-  description: "Hotel reservations, rooms and daily operations.",
-  other: {
-    "codex-preview": "development",
-  },
+  description: "Loomi: Turn on the brilliant way to manage stays.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -24,3 +21,4 @@ export default function RootLayout({
     </html>
   );
 }
+
