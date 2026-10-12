@@ -1,3 +1,21 @@
- 'use client';
-import {useState} from 'react';import SupportFooter from './support-footer';
-export default function Activation({license}:{license:any}){const [error,setError]=useState('');return <><main className="loading"><h1>Activate Loomi PMS</h1><p>{license.error||'A valid licence is required.'}</p><p>Installation ID: <code>{license.installationId}</code></p><p>Ask Bitwise MSP for a monthly, yearly or permanent licence for this installation.</p><label>Upload licence file<input type="file" accept=".json" onChange={async e=>{const f=e.target.files?.[0];if(!f)return;try{const license=JSON.parse(await f.text());const r=await fetch('/api/license',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(license)});const x=await r.json();if(!r.ok)throw Error(x.error);location.reload()}catch(e){setError(String(e))}}}/></label><p role="alert">{error}</p><button onClick={async()=>{await fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});location.href='/login'}}>Sign out</button></main><SupportFooter/></>}
+'use client';
+import LoomiBrand from './loomi-brand';
+import LicenseSettings from './license-settings';
+import SupportFooter from './support-footer';
+
+export default function Activation({license, superAdmin = false}: {license: {error?: string; installationId?: string}; superAdmin?: boolean}) {
+  return <>
+    <main className="loading">
+      <LoomiBrand/>
+      <h1>Activate Loomi PMS</h1>
+      <p>{superAdmin ? license.error || 'A valid licence is required.' : 'Hotel access is unavailable. Please contact your super admin.'}</p>
+      {superAdmin && <p>Installation ID: <code>{license.installationId}</code></p>}
+      {superAdmin ? <LicenseSettings/> : <p>Ask your super admin to activate a Small, Standard or Hotel licence for this installation.</p>}
+      <button onClick={async () => {
+        await fetch('/api/logout', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+        location.href = '/login';
+      }}>Sign out</button>
+    </main>
+    <SupportFooter/>
+  </>;
+}

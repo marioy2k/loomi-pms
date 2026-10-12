@@ -59,10 +59,24 @@ Open your HTTPS address and sign in. Secure cookies intentionally require HTTPS.
 On the Bitwise issuing computer, use the installation ID shown on that server:
 
 ```bash
-node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 5 customer-licence.json
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 1 standard customer-licence.json
 ```
 
-Replace `yearly` with `monthly` or `permanent` as needed. The number is the maximum properties. Upload the JSON file from the owner's activation screen. Missing, expired, tampered or other-installation licences block PMS APIs and the dashboard. Renewal currently requires uploading a newly issued file after expiration; there is no automatic billing or licence portal. Licences work offline. Keep the server time correct.
+Replace `yearly` with `monthly` or `permanent` as needed. The number is the maximum licensed properties. Choose `small`, `standard` or `hotel`:
+
+| Plan | Suggested rooms | Maximum rooms per property | Monthly USD/property | Annual USD/property |
+| --- | --- | --- | --- | --- |
+| Small | 1–10 | 10 | $49 | $490 |
+| Standard | 11–25 | 25 | $89 | $890 |
+| Hotel | 26–50 | 50 | $149 | $1,490 |
+
+Only the maximum is enforced; new properties can start with zero rooms. Every configured room, including out-of-service rooms, counts. Each licensed property receives the same cap; subscription totals multiply the price by the licensed property count. Permanent licences use a custom quote and retain monthly/yearly reference prices.
+
+The plan, room cap and USD prices are signed into the licence. Old licences without these fields must be reissued using the same installation ID and signing key before updating the application; otherwise activation is required. Choose a plan covering all existing rooms. Over-cap downgrades are rejected.
+
+The installation owner is the super admin. Only this account sees **Settings → Licence & pricing**, including signed prices, subscription totals, room usage and a renewal/upgrade upload. The super admin also sees pricing on the activation screen after expiry. Staff and ordinary admins cannot access licence pricing.
+
+ Upload the JSON file from the owner's activation screen. Missing, expired, tampered or other-installation licences block PMS APIs and the dashboard. Renewal requires uploading a newly issued file in Settings or on the activation screen; there is no automatic billing. Licences work offline. Keep the server time correct.
 
 Server owners with root access can modify software and bypass local enforcement. Signing prevents customers from generating valid licences; it cannot prevent a determined server owner from changing the application code.
 
@@ -97,3 +111,39 @@ Schema migrations apply on startup. Review migrations before updating; restore a
 Node production build, password/session tests, licence signature/expiry tests and SQLite transaction/backup tests are checked. Docker itself was unavailable in the development environment; the image must be built and checked on your Ubuntu server before production use. This is an initial self-hosted release, not an independent security audit. SQLite files are not encrypted by this application; use disk encryption and restricted server access. There is no MFA, forgotten-password email flow, background mobile push or PWA installation yet. Browser alerts run while the application is open. Keep the GitHub repository private, keep dependencies updated, use HTTPS, and test staff permissions with test accounts before adding real guests.
 
 Powered by Bitwise MSP — +5977238113 — support@bitwisesr.com.
+
+
+## Super-admin hotel data reset
+
+Settings / Reset data clears rooms, reservations (including guest identification and history), and accounting transactions across all properties. Only the installation owner can call this endpoint. The confirmation phrase is `RESET ALL HOTEL DATA`. Property names/currencies, accounts, staff permissions, installation ID, licence and audit history remain. Back up before use; the app has no undo. Reset is transactional, is audited, and retains ledger initialization markers to prevent stale accounting requests from re-importing opening balances. Other open sessions must reload.
+
+## 21-day free demo
+
+Issue a signed `demo` licence using the same plan and property-count arguments as paid licences:
+
+```bash
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Hotel name" demo 1 standard demo.json
+```
+
+The demo lasts exactly 21 days from issuance (UTC), uses the selected room cap, and has no automatic billing. Re-uploading the same file does not restart the demo. At expiry, records remain stored but a paid licence is required to resume operations. The super admin can upload the paid licence from the activation screen without losing demo records. The issuing computer controls demo grants; Loomi does not automatically issue repeat demos.
+
+## Optional add-ons and licence version 2
+
+Choose a room package first, then extras. Core PMS keeps reservations, rooms, guests, basic housekeeping and recording guest payments. All prices below are USD per licensed property; annual subscriptions give two months free.
+
+| Optional add-on | Monthly | Annual | Availability |
+| --- | --- | --- | --- |
+| Swimming Day Passes | $15 | $150 | Planned; not sold yet |
+| Point of Sale | $25 | $250 | Planned; not sold yet |
+| Accounting | $20 | $200 | Available: ledger, income/expenses and transaction filters |
+| Operations | $20 | $200 | Planned: advanced task and maintenance workflows |
+
+New paid licences default to core PMS only. Add `accounting` after the output filename to include Accounting, or `none` to explicitly choose core only:
+
+```bash
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 1 small customer-licence.json accounting
+```
+
+Small plus Accounting costs $69/month or $690/year per property. One signed licence contains the room package, selected add-ons and combined price. Selected add-ons apply to every licensed property. Changing the selection requires a newly signed licence and owner activation; the estimate in Settings does not enable modules or bill anyone. Paid issuance rejects planned modules until implemented. Existing signed room-plan licences preserve Accounting until renewal, without changing their stored signed price. No existing licence is overwritten automatically. Older licences without any room plan still require reissue.
+
+Every newly issued demo includes all four add-on entitlements for 21 days at no charge; only implemented modules can be used. Accounting checks the signed entitlement on the server as well as in navigation. Guest payment recording remains available without Accounting and ledger records remain stored if Accounting is disabled. Prices, estimates, expiry and licence uploads remain super-admin only; staff receive only enabled add-on IDs.

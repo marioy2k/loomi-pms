@@ -1,6 +1,31 @@
-import {generateKeyPairSync,sign} from 'node:crypto';
-import {readFileSync,writeFileSync} from 'node:fs';
-const [command,...args]=process.argv.slice(2);
-if(command==='keygen'){const prefix=args[0]||'loomi';const k=generateKeyPairSync('ed25519');writeFileSync(prefix+'-private.pem',k.privateKey.export({type:'pkcs8',format:'pem'}),{mode:0o600,flag:'wx'});writeFileSync(prefix+'-public.pem',k.publicKey.export({type:'spki',format:'pem'}),{flag:'wx'});console.log('Keys created. Keep the private key only on the Bitwise issuing computer.');}
-else if(command==='issue'){const [keyFile,installationId,company,term,maxProperties,output]=args;if(!keyFile||!installationId||!company||!['monthly','yearly','permanent'].includes(term)||!Number.isSafeInteger(Number(maxProperties))||Number(maxProperties)<1||!output)throw Error('issue PRIVATE_KEY INSTALLATION_ID COMPANY monthly|yearly|permanent MAX_PROPERTIES OUTPUT.json');const now=new Date(),expiry=new Date(now);if(term==='monthly')expiry.setUTCMonth(expiry.getUTCMonth()+1);if(term==='yearly')expiry.setUTCFullYear(expiry.getUTCFullYear()+1);const bytes=Buffer.from(JSON.stringify({product:'Loomi PMS',installationId,company,term,maxProperties:Number(maxProperties),issuedAt:now.toISOString(),expiresAt:term==='permanent'?null:expiry.toISOString()}));writeFileSync(output,JSON.stringify({payload:bytes.toString('base64url'),signature:sign(null,bytes,readFileSync(keyFile)).toString('base64url')},null,2),{flag:'wx'});console.log('Licence created: '+output);}
-else throw Error('Use keygen PREFIX or issue PRIVATE_KEY INSTALLATION_ID COMPANY TERM MAX_PROPERTIES OUTPUT.json');
+import {getLicencePlan, licenceAddOns, validateAddOns, licencePricing} from '../runtime/plans.mjs';
+import {generateKeyPairSync, sign} from 'node:crypto';
+import {readFileSync, writeFileSync} from 'node:fs';
+const usage = 'issue PRIVATE_KEY INSTALLATION_ID COMPANY demo|monthly|yearly|permanent MAX_PROPERTIES small|standard|hotel OUTPUT.json [accounting|none]';
+const [command, ...args] = process.argv.slice(2);
+if (command === 'keygen') {
+  const prefix = args[0] || 'loomi';
+  const keys = generateKeyPairSync('ed25519');
+  writeFileSync(prefix + '-private.pem', keys.privateKey.export({type: 'pkcs8', format: 'pem'}), {mode: 0o600, flag: 'wx'});
+  writeFileSync(prefix + '-public.pem', keys.publicKey.export({type: 'spki', format: 'pem'}), {flag: 'wx'});
+  console.log('Keys created. Keep the private key only on the Bitwise issuing computer.');
+} else if (command === 'issue') {
+  const [keyFile, installationId, company, term, maxProperties, planId, output, selection = 'none'] = args;
+  if (args.length > 8 || !keyFile || !installationId || !company || !['demo', 'monthly', 'yearly', 'permanent'].includes(term) || !Number.isSafeInteger(Number(maxProperties)) || Number(maxProperties) < 1 || !output) throw Error(usage);
+  const plan = getLicencePlan(planId);
+  const requested = selection === 'none' ? [] : selection.split(',');
+  validateAddOns(requested);
+  if (term !== 'demo' && requested.some(id => !licenceAddOns[id].available)) throw Error('Swimming Day Passes, Point of Sale and Operations are planned and cannot be sold yet.');
+  const addOns = term === 'demo' ? Object.keys(licenceAddOns) : requested;
+  const pricing = licencePricing(planId, addOns);
+  const now = new Date(), expiry = new Date(now);
+  if (term === 'demo') expiry.setTime(now.getTime() + 21 * 86400000);
+  if (term === 'monthly') expiry.setUTCMonth(expiry.getUTCMonth() + 1);
+  if (term === 'yearly') expiry.setUTCFullYear(expiry.getUTCFullYear() + 1);
+  const bytes = Buffer.from(JSON.stringify({product: 'Loomi PMS', licenceVersion: 2, installationId, company, term, maxProperties: Number(maxProperties), plan: planId, maxRooms: plan.maxRooms, addOns, pricing, issuedAt: now.toISOString(), expiresAt: term === 'permanent' ? null : expiry.toISOString()}));
+  writeFileSync(output, JSON.stringify({payload: bytes.toString('base64url'), signature: sign(null, bytes, readFileSync(keyFile)).toString('base64url')}, null, 2), {flag: 'wx'});
+  console.log(`Licence created: ${output} — ${plan.name}, up to ${plan.maxRooms} rooms per property. Add-ons: ${addOns.map(id => licenceAddOns[id].name).join(', ') || 'None'}.`);
+  console.log(term === 'demo' ? 'Demo: 21 days, free. All add-on entitlements included; planned modules become usable when released. No automatic billing.' : `Package and add-ons: USD $${pricing.monthlyUsd}/month or $${pricing.yearlyUsd}/year per property.`);
+  if (term === 'permanent') console.log('Permanent licence price: custom quote.');
+  if (['monthly', 'yearly'].includes(term)) console.log(`Subscription total: USD $${(term === 'monthly' ? pricing.monthlyUsd : pricing.yearlyUsd) * Number(maxProperties)} per ${term === 'monthly' ? 'month' : 'year'}.`);
+} else throw Error('Use keygen PREFIX or ' + usage);
