@@ -2,10 +2,10 @@
   "version": "1.0.0",
   "name": "First Light",
   "changes": [
-    "Loomi lampshade logo and hospitality slogan.",
-    "Self-hosted Small, Standard and Hotel room plans with super-admin pricing.",
-    "Self-hosted demo licence option.",
-    "Super-admin hotel data reset with typed confirmation.",
-    "Super-admin-only licence expiry and remaining days."
+    "Approved Loomi lampshade logo and exact hospitality slogan.",
+    "Small, Standard and Hotel room packages with optional Swimming Day Passes, Point of Sale, Accounting and Operations.",
+    "Free 21-day demo with all extras included.",
+    "Super-admin-only licence pricing, expiry and remaining days.",
+    "Super-admin hotel data reset with typed confirmation and retained staff, licence, settings and audit."
   ]
 }

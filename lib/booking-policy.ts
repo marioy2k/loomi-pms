@@ -1,0 +1,5 @@
+import {type State,nights} from '@/lib/pms';
+import {localDay} from '@/lib/operations';
+export type BookingPolicy={depositPercent:number;cancellationPercent:number;freeCancellationDays:number;terms:string;autoEmail?:boolean};
+export const emptyPolicy:BookingPolicy={depositPercent:0,cancellationPercent:0,freeCancellationDays:0,terms:''};
+export function applyBookingPolicies(old:State,next:State,policy:BookingPolicy,today=localDay()){return {...next,bookings:next.bookings.map(b=>{const before=old.bookings.find(o=>o.id===b.id),snapshot=before?.policy||policy;const out={...b,policy:before?before.policy:snapshot,cancellationFee:before?.cancellationFee,cancelledAt:before?.cancelledAt};if(b.status==='Cancelled'&&before?.status!=='Cancelled'){const notice=Math.floor((Date.parse(b.arrival)-Date.parse(today))/86400000);out.cancellationFee=notice>=snapshot.freeCancellationDays?0:Math.round(b.rate*nights(b)*snapshot.cancellationPercent)/100;out.cancelledAt=today;}if(b.status!=='Cancelled'){out.cancellationFee=undefined;out.cancelledAt=undefined;}return out})};}
