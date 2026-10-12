@@ -116,3 +116,13 @@ Powered by Bitwise MSP — +5977238113 — support@bitwisesr.com.
 ## Super-admin hotel data reset
 
 Settings / Reset data clears rooms, reservations (including guest identification and history), and accounting transactions across all properties. Only the installation owner can call this endpoint. The confirmation phrase is `RESET ALL HOTEL DATA`. Property names/currencies, accounts, staff permissions, installation ID, licence and audit history remain. Back up before use; the app has no undo. Reset is transactional, is audited, and retains ledger initialization markers to prevent stale accounting requests from re-importing opening balances. Other open sessions must reload.
+
+## 21-day free demo
+
+Issue a signed `demo` licence using the same plan and property-count arguments as paid licences:
+
+```bash
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Hotel name" demo 1 standard demo.json
+```
+
+The demo lasts exactly 21 days from issuance (UTC), uses the selected room cap, and has no automatic billing. Re-uploading the same file does not restart the demo. At expiry, records remain stored but a paid licence is required to resume operations. The super admin can upload the paid licence from the activation screen without losing demo records. The issuing computer controls demo grants; Loomi does not automatically issue repeat demos.
