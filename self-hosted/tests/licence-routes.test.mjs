@@ -48,12 +48,20 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
     const licenseAPI = await import('../app/api/license/route.ts');
     const pmsAPI = await import('../app/api/pms/route.ts');
     const request = (path, body) => new Request('https://loomi.test' + path, {method: 'POST', headers: {Origin: 'https://loomi.test', 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    const issue = (plan, maxProperties = 2) => {
+    const issue = (plan, maxProperties = 2, term = 'monthly') => {
       const p = licencePlans[plan];
-      const bytes = Buffer.from(JSON.stringify({product: 'Loomi PMS', installationId: db.setting('installationId'), company: 'Test', term: 'monthly', maxProperties, plan, maxRooms: p.maxRooms, pricing: {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd}, issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString()}));
+      const now = Date.now();
+      const bytes = Buffer.from(JSON.stringify({product: 'Loomi PMS', installationId: db.setting('installationId'), company: 'Test', term, maxProperties, plan, maxRooms: p.maxRooms, pricing: {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd}, issuedAt: new Date(now).toISOString(), expiresAt: new Date(now + (term === 'demo' ? 21 : 1) * 86400000).toISOString()}));
       return {payload: bytes.toString('base64url'), signature: sign(null, bytes, keys.privateKey).toString('base64url')};
     };
     assert.equal((await licenseAPI.GET()).status, 200); // Owner can renew without an active licence.
+    const demo = issue('standard', 2, 'demo');
+    assert.equal((await licenseAPI.POST(request('/api/license', demo))).status, 200);
+    const demoStatus = (await (await licenseAPI.GET()).json()).license;
+    assert.equal(demoStatus.term, 'demo');
+    assert.equal(Date.parse(demoStatus.expiresAt) - Date.parse(demoStatus.issuedAt), 21 * 86400000);
+    assert.equal((await licenseAPI.POST(request('/api/license', demo))).status, 200);
+    assert.equal((await (await licenseAPI.GET()).json()).license.expiresAt, demoStatus.expiresAt);
     for (const plan of Object.keys(licencePlans)) {
       const cap = licencePlans[plan].maxRooms;
       db.db.prepare('DELETE FROM property').run();
