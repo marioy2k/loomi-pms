@@ -1,3 +1,4 @@
+import {licenceDaysRemaining} from '@/runtime/licence-display.mjs';
 import {readFileSync} from 'node:fs';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {checkOrigin, store, verifyLicense, licenceStatus} from '@/runtime/core.mjs';
@@ -7,10 +8,11 @@ export async function GET() {
   const user = await getChatGPTUser();
   const db = store();
   if (!user || user.email !== db.setting('ownerEmail')) {
-    return Response.json({error: 'Only the super admin can view licence prices'}, {status: 403});
+    return Response.json({error: 'Only the super admin can view licence details'}, {status: 403});
   }
   const properties = db.db.prepare("SELECT id, json_extract(data,'$.hotel') AS name, json_array_length(data,'$.rooms') AS rooms FROM property ORDER BY id").all();
-  return Response.json({license: licenceStatus(), plans: licencePlans, properties});
+  const license = licenceStatus();
+  return Response.json({license: {...license, daysRemaining: licenceDaysRemaining(license)}, plans: licencePlans, properties}, {headers: {'Cache-Control': 'private, no-store'}});
 }
 
 export async function POST(req: Request) {

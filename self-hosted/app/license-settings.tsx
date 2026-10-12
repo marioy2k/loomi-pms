@@ -4,7 +4,7 @@ import {readApiResponse} from '@/lib/api-response';
 
 type Plan = {name: string; minRooms: number; maxRooms: number; monthlyUsd: number; yearlyUsd: number};
 type LicenseData = {
-  license: {valid: boolean; error?: string; installationId: string; company?: string; plan?: string; term?: string; maxRooms?: number; maxProperties?: number; expiresAt?: string | null; pricing?: {currency: string; monthlyUsd: number; yearlyUsd: number}};
+  license: {valid: boolean; daysRemaining?: number | null; error?: string; installationId: string; company?: string; plan?: string; term?: string; maxRooms?: number; maxProperties?: number; expiresAt?: string | null; pricing?: {currency: string; monthlyUsd: number; yearlyUsd: number}};
   plans: Record<string, Plan>;
   properties: {id: number; name: string; rooms: number}[];
 };
@@ -33,6 +33,7 @@ export default function LicenseSettings() {
     {license.valid ? <>
       <p><strong>{current?.name} licence</strong> · {license.company} · {license.term === 'demo' ? '21-day free demo' : license.term}</p>
       <p>Up to {license.maxRooms} rooms per property · {license.maxProperties} licensed properties.</p>
+      {license.daysRemaining !== null && license.daysRemaining !== undefined && <p><strong>{license.daysRemaining} {license.daysRemaining === 1 ? 'day' : 'days'} remaining</strong></p>}
       <p>{license.expiresAt ? `Expires: ${new Date(license.expiresAt).toLocaleDateString()}` : 'Permanent licence — no expiry.'}</p>
       {license.pricing && <p>Prices on this signed licence: {usd(license.pricing.monthlyUsd)}/month or {usd(license.pricing.yearlyUsd)}/year per property.</p>}
       <p>{license.term === 'demo' ? 'Demo price: free for 21 days. No automatic billing. Activate a paid licence to continue after expiry.' : charge !== null ? `Subscription total: ${usd(charge)} per ${license.term === 'monthly' ? 'month' : 'year'}.` : 'Permanent licence price: custom quote.'}</p>

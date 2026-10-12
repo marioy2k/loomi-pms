@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "name": "First Light",
+  "changes": [
+    "Loomi lampshade logo and hospitality slogan.",
+    "Self-hosted Small, Standard and Hotel room plans with super-admin pricing.",
+    "Self-hosted demo licence option.",
+    "Super-admin hotel data reset with typed confirmation.",
+    "Super-admin-only licence expiry and remaining days."
+  ]
+}

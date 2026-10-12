@@ -1,2 +1,3 @@
+import {releaseLabel} from '@/lib/release';
 import LoomiBrand from './loomi-brand';
-export default function SupportFooter(){return <footer className="support-footer"><LoomiBrand/><p>Powered by <strong>Bitwise MSP</strong></p><div className="support-contacts"><span>For support:</span><a href="tel:+5977238113">Call +597 7238113</a><a href="https://wa.me/5977238113" target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="mailto:support@bitwisesr.com">support@bitwisesr.com</a></div></footer>}
+export default function SupportFooter(){return <footer className="support-footer"><LoomiBrand/><p className="release-version">{releaseLabel}</p><p>Powered by <strong>Bitwise MSP</strong></p><div className="support-contacts"><span>For support:</span><a href="tel:+5977238113">Call +597 7238113</a><a href="https://wa.me/5977238113" target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="mailto:support@bitwisesr.com">support@bitwisesr.com</a></div></footer>}

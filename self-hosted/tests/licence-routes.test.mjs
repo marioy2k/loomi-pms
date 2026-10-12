@@ -59,6 +59,8 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
     assert.equal((await licenseAPI.POST(request('/api/license', demo))).status, 200);
     const demoStatus = (await (await licenseAPI.GET()).json()).license;
     assert.equal(demoStatus.term, 'demo');
+    assert.equal(demoStatus.daysRemaining, 21);
+    assert.equal((await licenseAPI.GET()).headers.get('cache-control'), 'private, no-store');
     assert.equal(Date.parse(demoStatus.expiresAt) - Date.parse(demoStatus.issuedAt), 21 * 86400000);
     assert.equal((await licenseAPI.POST(request('/api/license', demo))).status, 200);
     assert.equal((await (await licenseAPI.GET()).json()).license.expiresAt, demoStatus.expiresAt);
@@ -129,7 +131,16 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
       user = {email: role + '@example.com', displayName: role};
       db.db.prepare('INSERT INTO staff(email,name,role,permissions,active,property_ids) VALUES (?,?,?,?,?,?)').run(user.email, role, role, '[]', 1, '[1]');
       assert.equal((await resetAPI.POST(request('/api/reset', {confirmation: 'RESET ALL HOTEL DATA'}))).status, 403);
-      assert.equal((await licenseAPI.GET()).status, 403);
+      const deniedLicence = await licenseAPI.GET();
+      assert.equal(deniedLicence.status, 403);
+      const deniedBody = await deniedLicence.json();
+      assert.deepEqual(Object.keys(deniedBody), ['error']);
+      assert.equal(deniedBody.daysRemaining, undefined);
+      assert.equal(deniedBody.expiresAt, undefined);
+      const staffState = await (await pmsAPI.GET(new Request('https://loomi.test/api/pms'))).json();
+      assert.equal(staffState.daysRemaining, undefined);
+      assert.equal(staffState.license, undefined);
+      assert.equal(staffState.expiresAt, undefined);
       assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel')))).status, 403);
     }
     user = null;
