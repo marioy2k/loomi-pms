@@ -126,3 +126,24 @@ node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Ho
 ```
 
 The demo lasts exactly 21 days from issuance (UTC), uses the selected room cap, and has no automatic billing. Re-uploading the same file does not restart the demo. At expiry, records remain stored but a paid licence is required to resume operations. The super admin can upload the paid licence from the activation screen without losing demo records. The issuing computer controls demo grants; Loomi does not automatically issue repeat demos.
+
+## Optional add-ons and licence version 2
+
+Choose a room package first, then extras. Core PMS keeps reservations, rooms, guests, basic housekeeping and recording guest payments. All prices below are USD per licensed property; annual subscriptions give two months free.
+
+| Optional add-on | Monthly | Annual | Availability |
+| --- | --- | --- | --- |
+| Swimming Day Passes | $15 | $150 | Planned; not sold yet |
+| Point of Sale | $25 | $250 | Planned; not sold yet |
+| Accounting | $20 | $200 | Available: ledger, income/expenses and transaction filters |
+| Operations | $20 | $200 | Planned: advanced task and maintenance workflows |
+
+New paid licences default to core PMS only. Add `accounting` after the output filename to include Accounting, or `none` to explicitly choose core only:
+
+```bash
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 1 small customer-licence.json accounting
+```
+
+Small plus Accounting costs $69/month or $690/year per property. One signed licence contains the room package, selected add-ons and combined price. Selected add-ons apply to every licensed property. Changing the selection requires a newly signed licence and owner activation; the estimate in Settings does not enable modules or bill anyone. Paid issuance rejects planned modules until implemented. Existing signed room-plan licences preserve Accounting until renewal, without changing their stored signed price. No existing licence is overwritten automatically. Older licences without any room plan still require reissue.
+
+Every newly issued demo includes all four add-on entitlements for 21 days at no charge; only implemented modules can be used. Accounting checks the signed entitlement on the server as well as in navigation. Guest payment recording remains available without Accounting and ledger records remain stored if Accounting is disabled. Prices, estimates, expiry and licence uploads remain super-admin only; staff receive only enabled add-on IDs.

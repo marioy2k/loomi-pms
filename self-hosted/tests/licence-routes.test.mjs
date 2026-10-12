@@ -6,7 +6,7 @@ import {generateKeyPairSync, sign} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {licencePlans} from '../runtime/plans.mjs';
+import {licencePlans, licencePricing} from '../runtime/plans.mjs';
 
 test('licence and room API handlers enforce owner privacy, caps and downgrade coverage', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'loomi-licence-routes-'));
@@ -28,7 +28,7 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
       if (url.endsWith('.ts')) {
         // Mirror TypeScript's removal of imports used only as types in these existing modules.
         const source = readFileSync(new URL(url), 'utf8').replace(/import \{([^}]+)\} from/g, (match, names) => {
-          const values = names.split(',').filter(name => !['Access','State','Booking','Room','Permission','Staff'].includes(name.trim()));
+          const values = names.split(',').filter(name => !['Access','State','Booking','Room','Permission','Staff','Transaction'].includes(name.trim()));
           return values.length ? `import {${values.join(',')}} from` : 'import {} from';
         });
         return {format: 'module-typescript', source, shortCircuit: true};
@@ -48,10 +48,10 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
     const licenseAPI = await import('../app/api/license/route.ts');
     const pmsAPI = await import('../app/api/pms/route.ts');
     const request = (path, body) => new Request('https://loomi.test' + path, {method: 'POST', headers: {Origin: 'https://loomi.test', 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    const issue = (plan, maxProperties = 2, term = 'monthly') => {
+    const issue = (plan, maxProperties = 2, term = 'monthly', addOns) => {
       const p = licencePlans[plan];
       const now = Date.now();
-      const bytes = Buffer.from(JSON.stringify({product: 'Loomi PMS', installationId: db.setting('installationId'), company: 'Test', term, maxProperties, plan, maxRooms: p.maxRooms, pricing: {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd}, issuedAt: new Date(now).toISOString(), expiresAt: new Date(now + (term === 'demo' ? 21 : 1) * 86400000).toISOString()}));
+      const bytes = Buffer.from(JSON.stringify({product: 'Loomi PMS', installationId: db.setting('installationId'), company: 'Test', term, maxProperties, plan, maxRooms: p.maxRooms, pricing: addOns === undefined ? {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd} : licencePricing(plan, addOns), ...(addOns === undefined ? {} : {licenceVersion: 2, addOns}), issuedAt: new Date(now).toISOString(), expiresAt: new Date(now + (term === 'demo' ? 21 : 1) * 86400000).toISOString()}));
       return {payload: bytes.toString('base64url'), signature: sign(null, bytes, keys.privateKey).toString('base64url')};
     };
     assert.equal((await licenseAPI.GET()).status, 200); // Owner can renew without an active licence.
@@ -87,6 +87,23 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
         assert.equal(db.setting('licence'), previous);
       }
     }
+    const accountingAPI = await import('../app/api/accounting/route.ts');
+    const accountingRequest = () => new Request('https://loomi.test/api/accounting?propertyId=1');
+    assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel', 2, 'monthly', [])))).status, 200);
+    assert.equal((await accountingAPI.GET(accountingRequest())).status, 403);
+    assert.equal((await accountingAPI.POST(request('/api/accounting?propertyId=1', {}))).status, 403);
+    const coreInfo = await (await pmsAPI.GET(new Request('https://loomi.test/api/pms'))).json();
+    assert.deepEqual(coreInfo.addOns, []);
+    const existingState = coreInfo.state;
+    const withPayment = {...existingState, bookings: [{id:'ADDON-1',guest:'Test guest',email:'',phone:'',room:existingState.rooms[0].id,arrival:'2026-10-10',departure:'2026-10-12',status:'Confirmed',rate:100,paid:50,paymentMethod:'Cash',notes:''}]};
+    assert.equal((await pmsAPI.POST(request('/api/pms', {state: withPayment, previous: JSON.stringify(existingState)}))).status, 200);
+    assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel', 2, 'monthly', ['accounting'])))).status, 200);
+    assert.equal((await accountingAPI.GET(accountingRequest())).status, 200);
+    const ledgerBefore = JSON.stringify(db.db.prepare('SELECT * FROM transactions ORDER BY id').all());
+    assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel', 2, 'monthly', [])))).status, 200);
+    assert.equal((await accountingAPI.GET(accountingRequest())).status, 403);
+    assert.equal(JSON.stringify(db.db.prepare('SELECT * FROM transactions ORDER BY id').all()), ledgerBefore);
+    assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel')))).status, 200);
     // Coverage checks must include properties beyond the currently selected one.
     db.db.prepare('UPDATE property SET data=? WHERE id=1').run(JSON.stringify({hotel: 'First', currency: 'USD', rooms: [], bookings: []}));
     db.db.prepare('INSERT INTO property(id,data) VALUES (2,?)').run(JSON.stringify({hotel: 'Second', currency: 'USD', rooms: Array(11).fill({}), bookings: []}));

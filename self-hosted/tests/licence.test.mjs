@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {verifyLicense} from '../runtime/core.mjs';
-import {licencePlans, assertRoomLimit, assertLicenceCoverage} from '../runtime/plans.mjs';
+import {licencePlans, assertRoomLimit, assertLicenceCoverage, licencePricing, licenceAddOns, enabledAddOns, hasAddOn} from '../runtime/plans.mjs';
 
 test('signed plans enforce all boundaries and reject invalid or legacy licences', () => {
   const keys = generateKeyPairSync('ed25519');
@@ -63,7 +63,50 @@ test('issuer embeds the selected cap and USD prices for each term and plan', () 
         }
         assert.equal(status.plan, plan);
         assert.equal(status.maxRooms, p.maxRooms);
-        assert.deepEqual(status.pricing, {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd});
+        assert.deepEqual(status.pricing, licencePricing(plan, term === 'demo' ? Object.keys(licenceAddOns) : []));
+        assert.deepEqual(enabledAddOns(status), term === 'demo' ? Object.keys(licenceAddOns) : []);
+      }
+    }
+  } finally {rmSync(dir, {recursive: true, force: true});}
+});
+
+test('add-ons are signed, validated, priced together and preserve existing licences', () => {
+  const keys = generateKeyPairSync('ed25519');
+  const pub = keys.publicKey.export({type: 'spki', format: 'pem'});
+  const envelope = value => {const bytes = Buffer.from(JSON.stringify(value)); return {payload: bytes.toString('base64url'), signature: sign(null, bytes, keys.privateKey).toString('base64url')};};
+  const value = {product: 'Loomi PMS', licenceVersion: 2, installationId: 'test', company: 'Hotel', term: 'permanent', maxProperties: 1, plan: 'small', maxRooms: 10, addOns: ['accounting'], pricing: licencePricing('small', ['accounting']), issuedAt: new Date().toISOString(), expiresAt: null};
+  assert.deepEqual(value.pricing, {currency: 'USD', monthlyUsd: 69, yearlyUsd: 690});
+  const status = verifyLicense(envelope(value), pub, 'test');
+  assert.equal(status.valid, true);
+  assert.equal(hasAddOn(status, 'accounting'), true);
+  assert.equal(hasAddOn(status, 'pos'), false);
+  const core = verifyLicense(envelope({...value, addOns: [], pricing: licencePricing('small')}), pub, 'test');
+  assert.equal(core.valid, true);
+  assert.equal(hasAddOn(core, 'accounting'), false);
+  for (const change of [{addOns: ['unknown']}, {addOns: ['accounting', 'accounting']}, {addOns: 'accounting'}, {addOns: []}, {licenceVersion: 3}, {licenceVersion: undefined}, {pricing: {...value.pricing, monthlyUsd: 49}}, {addOns: ['pos'], pricing: licencePricing('small', ['pos'])}]) {
+    assert.equal(verifyLicense(envelope({...value, ...change}), pub, 'test').valid, false);
+  }
+  const {licenceVersion, addOns, ...legacy} = value;
+  assert.equal(hasAddOn(verifyLicense(envelope({...legacy, pricing: licencePricing('small')}), pub, 'test'), 'accounting'), true);
+  assert.deepEqual(enabledAddOns({valid: false, term: 'demo'}), []);
+  assert.deepEqual(licencePricing('small', Object.keys(licenceAddOns)), {currency: 'USD', monthlyUsd: 129, yearlyUsd: 1290});
+});
+
+test('issuer selects Accounting and refuses unavailable or duplicate paid add-ons', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'loomi-addons-'));
+  const keys = generateKeyPairSync('ed25519');
+  const keyFile = join(dir, 'private.pem');
+  writeFileSync(keyFile, keys.privateKey.export({type: 'pkcs8', format: 'pem'}), {mode: 0o600});
+  try {
+    for (const selection of ['accounting', 'none', 'pos', 'swimming', 'operations', 'accounting,accounting', 'unknown']) {
+      const output = join(dir, selection + '.json');
+      const result = spawnSync(process.execPath, ['tools/licence.mjs', 'issue', keyFile, 'test', 'Hotel', 'monthly', '2', 'small', output, selection], {encoding: 'utf8'});
+      assert.equal(result.status === 0, ['accounting', 'none'].includes(selection), result.stderr);
+      if (result.status === 0) {
+        const status = verifyLicense(JSON.parse(readFileSync(output, 'utf8')), keys.publicKey.export({type: 'spki', format: 'pem'}), 'test');
+        assert.equal(status.valid, true);
+        assert.equal(hasAddOn(status, 'accounting'), selection === 'accounting');
+        assert.match(result.stdout, new RegExp('Subscription total: USD \\$' + (selection === 'accounting' ? 138 : 98)));
       }
     }
   } finally {rmSync(dir, {recursive: true, force: true});}
