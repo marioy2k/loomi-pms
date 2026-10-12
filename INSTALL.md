@@ -59,10 +59,24 @@ Open your HTTPS address and sign in. Secure cookies intentionally require HTTPS.
 On the Bitwise issuing computer, use the installation ID shown on that server:
 
 ```bash
-node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 5 customer-licence.json
+node self-hosted/tools/licence.mjs issue bitwise-private.pem INSTALLATION_ID "Customer hotel" yearly 1 standard customer-licence.json
 ```
 
-Replace `yearly` with `monthly` or `permanent` as needed. The number is the maximum properties. Upload the JSON file from the owner's activation screen. Missing, expired, tampered or other-installation licences block PMS APIs and the dashboard. Renewal currently requires uploading a newly issued file after expiration; there is no automatic billing or licence portal. Licences work offline. Keep the server time correct.
+Replace `yearly` with `monthly` or `permanent` as needed. The number is the maximum licensed properties. Choose `small`, `standard` or `hotel`:
+
+| Plan | Suggested rooms | Maximum rooms per property | Monthly USD/property | Annual USD/property |
+| --- | --- | --- | --- | --- |
+| Small | 1–10 | 10 | $49 | $490 |
+| Standard | 11–25 | 25 | $89 | $890 |
+| Hotel | 26–50 | 50 | $149 | $1,490 |
+
+Only the maximum is enforced; new properties can start with zero rooms. Every configured room, including out-of-service rooms, counts. Each licensed property receives the same cap; subscription totals multiply the price by the licensed property count. Permanent licences use a custom quote and retain monthly/yearly reference prices.
+
+The plan, room cap and USD prices are signed into the licence. Old licences without these fields must be reissued using the same installation ID and signing key before updating the application; otherwise activation is required. Choose a plan covering all existing rooms. Over-cap downgrades are rejected.
+
+The installation owner is the super admin. Only this account sees **Settings → Licence & pricing**, including signed prices, subscription totals, room usage and a renewal/upgrade upload. The super admin also sees pricing on the activation screen after expiry. Staff and ordinary admins cannot access licence pricing.
+
+ Upload the JSON file from the owner's activation screen. Missing, expired, tampered or other-installation licences block PMS APIs and the dashboard. Renewal requires uploading a newly issued file in Settings or on the activation screen; there is no automatic billing. Licences work offline. Keep the server time correct.
 
 Server owners with root access can modify software and bypass local enforcement. Signing prevents customers from generating valid licences; it cannot prevent a determined server owner from changing the application code.
 
@@ -97,3 +111,4 @@ Schema migrations apply on startup. Review migrations before updating; restore a
 Node production build, password/session tests, licence signature/expiry tests and SQLite transaction/backup tests are checked. Docker itself was unavailable in the development environment; the image must be built and checked on your Ubuntu server before production use. This is an initial self-hosted release, not an independent security audit. SQLite files are not encrypted by this application; use disk encryption and restricted server access. There is no MFA, forgotten-password email flow, background mobile push or PWA installation yet. Browser alerts run while the application is open. Keep the GitHub repository private, keep dependencies updated, use HTTPS, and test staff permissions with test accounts before adding real guests.
 
 Powered by Bitwise MSP — +5977238113 — support@bitwisesr.com.
+
