@@ -44,12 +44,23 @@ test('issuer embeds the selected cap and USD prices for each term and plan', () 
   writeFileSync(keyFile, keys.privateKey.export({type: 'pkcs8', format: 'pem'}), {mode: 0o600});
   try {
     for (const [plan, p] of Object.entries(licencePlans)) {
-      for (const term of ['monthly', 'yearly', 'permanent']) {
+      for (const term of ['demo', 'monthly', 'yearly', 'permanent']) {
         const output = join(dir, `${plan}-${term}.json`);
         const issued = spawnSync(process.execPath, ['tools/licence.mjs', 'issue', keyFile, 'test', 'Hotel', term, '2', plan, output], {encoding: 'utf8'});
         assert.equal(issued.status, 0, issued.stderr);
         const status = verifyLicense(JSON.parse(readFileSync(output, 'utf8')), keys.publicKey.export({type: 'spki', format: 'pem'}), 'test');
         assert.equal(status.valid, true);
+        if (term === 'demo') {
+          const start = Date.parse(status.issuedAt), end = Date.parse(status.expiresAt);
+          assert.equal(end - start, 21 * 86400000);
+          const demo = JSON.parse(readFileSync(output, 'utf8'));
+          assert.equal(verifyLicense(demo, keys.publicKey.export({type: 'spki', format: 'pem'}), 'test', end - 1).valid, true);
+          assert.equal(verifyLicense(demo, keys.publicKey.export({type: 'spki', format: 'pem'}), 'test', end).valid, false);
+          const changed = {...status, expiresAt: new Date(end + 86400000).toISOString()};
+          delete changed.valid;
+          const bytes = Buffer.from(JSON.stringify(changed));
+          assert.equal(verifyLicense({payload: bytes.toString('base64url'), signature: sign(null, bytes, keys.privateKey).toString('base64url')}, keys.publicKey.export({type: 'spki', format: 'pem'}), 'test').valid, false);
+        }
         assert.equal(status.plan, plan);
         assert.equal(status.maxRooms, p.maxRooms);
         assert.deepEqual(status.pricing, {currency: 'USD', monthlyUsd: p.monthlyUsd, yearlyUsd: p.yearlyUsd});
