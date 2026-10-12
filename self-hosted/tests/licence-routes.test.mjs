@@ -82,13 +82,50 @@ test('licence and room API handlers enforce owner privacy, caps and downgrade co
     db.db.prepare('INSERT INTO property(id,data) VALUES (2,?)').run(JSON.stringify({hotel: 'Second', currency: 'USD', rooms: Array(11).fill({}), bookings: []}));
     assert.equal((await licenseAPI.POST(request('/api/license', issue('small')))).status, 400);
     assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel', 1)))).status, 400);
+    const resetAPI = await import('../app/api/reset/route.ts');
+    const {initializeLedger} = await import('../lib/ledger.ts');
+    const oldState = {hotel: 'First', currency: 'SRD', rooms: [{id: '101', type: 'King', rate: 100, housekeeping: 'Clean'}], bookings: [{id: 'B1', guest: 'Private guest', room: '101', arrival: '2026-01-01', departure: '2026-01-02', rate: 100, paid: 50, paymentMethod: 'Cash', status: 'Confirmed', email: 'guest@example.com', phone: '123', notes: 'Private note', identification: {type: 'Passport', number: 'private', country: 'SR', expiry: ''}}]};
+    db.db.prepare('UPDATE property SET data=? WHERE id=1').run(JSON.stringify(oldState));
+    db.db.prepare('UPDATE property SET data=? WHERE id=2').run(JSON.stringify({...oldState, hotel: 'Second', currency: 'EUR'}));
+    db.db.prepare('DELETE FROM ledger_meta').run();
+    db.db.prepare('DELETE FROM transactions').run();
+    await initializeLedger(db, oldState, 1);
+    await initializeLedger(db, oldState, 2);
+    db.db.prepare('INSERT INTO staff(email,name,role,permissions,active,property_ids) VALUES (?,?,?,?,?,?)').run('keep@example.com','Kept staff','employee','["rooms"]',1,'[1,2]');
+    db.setPassword('keep@example.com', 'staff-password-123', 'Kept staff');
+    db.login('owner@example.com', 'owner-password-123');
+    const kept = () => JSON.stringify({settings: db.db.prepare('SELECT * FROM settings WHERE key != ? ORDER BY key').all('clock'), staff: db.db.prepare('SELECT * FROM staff ORDER BY email').all(), accounts: db.db.prepare('SELECT * FROM accounts ORDER BY email').all(), sessions: db.db.prepare('SELECT * FROM sessions ORDER BY email').all()});
+    const beforeKept = kept();
+    const beforeData = () => JSON.stringify({properties: db.db.prepare('SELECT * FROM property ORDER BY id').all(), transactions: db.db.prepare('SELECT * FROM transactions ORDER BY id').all()});
+    const populated = beforeData();
+    assert.equal((await resetAPI.POST(request('/api/reset', {confirmation: 'yes'}))).status, 400);
+    assert.equal((await resetAPI.POST(new Request('https://loomi.test/api/reset', {method: 'POST', headers: {Origin: 'https://evil.test', 'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'RESET ALL HOTEL DATA'})}))).status, 400);
+    assert.equal(beforeData(), populated);
+    db.db.exec("CREATE TRIGGER reject_reset BEFORE INSERT ON audit WHEN NEW.event='hotel-data-reset' BEGIN SELECT RAISE(ABORT,'test rollback'); END");
+    assert.equal((await resetAPI.POST(request('/api/reset', {confirmation: 'RESET ALL HOTEL DATA'}))).status, 400);
+    assert.equal(beforeData(), populated);
+    db.db.exec('DROP TRIGGER reject_reset');
+    const resetResponse = await resetAPI.POST(request('/api/reset', {confirmation: 'RESET ALL HOTEL DATA'}));
+    assert.equal(resetResponse.status, 200);
+    assert.deepEqual((await resetResponse.json()).removed, {properties: 2, rooms: 2, reservations: 2, transactions: 2});
+    assert.equal(kept(), beforeKept);
+    for (const row of db.db.prepare('SELECT id,data FROM property ORDER BY id').all()) {
+      assert.deepEqual(JSON.parse(row.data), {hotel: row.id === 1 ? 'First' : 'Second', currency: row.id === 1 ? 'SRD' : 'EUR', rooms: [], bookings: []});
+    }
+    assert.equal(db.db.prepare('SELECT count(*) AS n FROM transactions').get().n, 0);
+    assert.equal(db.db.prepare("SELECT count(*) AS n FROM audit WHERE event='hotel-data-reset'").get().n, 1);
+    await initializeLedger(db, oldState, 1);
+    assert.equal(db.db.prepare('SELECT count(*) AS n FROM transactions').get().n, 0);
+    assert.equal((await pmsAPI.POST(request('/api/pms', {state: oldState, previous: JSON.stringify(oldState)}))).status, 409);
     for (const role of ['admin', 'employee']) {
       user = {email: role + '@example.com', displayName: role};
       db.db.prepare('INSERT INTO staff(email,name,role,permissions,active,property_ids) VALUES (?,?,?,?,?,?)').run(user.email, role, role, '[]', 1, '[1]');
+      assert.equal((await resetAPI.POST(request('/api/reset', {confirmation: 'RESET ALL HOTEL DATA'}))).status, 403);
       assert.equal((await licenseAPI.GET()).status, 403);
       assert.equal((await licenseAPI.POST(request('/api/license', issue('hotel')))).status, 403);
     }
     user = null;
+    assert.equal((await resetAPI.POST(request('/api/reset', {confirmation: 'RESET ALL HOTEL DATA'}))).status, 403);
     assert.equal((await licenseAPI.GET()).status, 403);
   } finally {
     hooks.deregister();
