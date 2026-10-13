@@ -9,7 +9,8 @@ Requires Docker with Compose. From this directory:
 1. Create `secrets/admin_password` containing a password of 12–128 characters. Keep this file private.
 2. Set `APP_URL` to the exact application origin, `ADMIN_EMAIL` to the owner email and optionally `ADMIN_NAME`.
 3. Run `docker compose up -d --build`.
-4. Put a reverse proxy in front of port 3000. For HTTPS, set `COOKIE_SECURE` to `true` in Compose.
+4. For direct access without a reverse proxy, set `LOOMI_BIND_ADDRESS` to the server's LAN IP and `LOOMI_HTTP_PORT` to `80`. For example, set `LOOMI_BIND_ADDRESS=10.10.111.47` and `APP_URL=http://10.10.111.47` before starting Compose; open `http://10.10.111.47`. The port binds only to that IP. By default it binds to `127.0.0.1:80`.
+5. If deploying behind an HTTPS reverse proxy instead, choose the appropriate local bind address/port, set `APP_URL` to the HTTPS origin and set `COOKIE_SECURE` to `true` in Compose.
 
 The initial owner password is used only to initialize an empty database. Existing accounts and data remain in the `loomi_data` volume. Licence packages are managed in the application by the super-admin.
 
