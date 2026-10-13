@@ -1,12 +1,12 @@
 import type {State,Booking} from '@/lib/pms';
 import {nights} from '@/lib/pms';
 import {moduleEnabled,type Module} from '@/lib/modules';
-import {can,hasPermission,isSuperAdmin,type Access} from '@/lib/permissions';
+import {can,hasPermission,isSuperAdmin,type Access,type Permission} from '@/lib/permissions';
 import {validDate,cents} from '@/lib/accounting-reports';
 export type Operation={id:string;property_id:number;kind:string;data:Record<string,any>;version:number;created:string;updated:string;actor:string};
 export const operationKinds=['maintenance','supplier','purchase','shift','policy','request','reminder'] as const;
 export type OperationKind=typeof operationKinds[number];
-export const operationPermission:Record<OperationKind,'maintenance'|'inventoryManage'|'posManage'|'reservations'|'payments'>={maintenance:'maintenance',supplier:'inventoryManage',purchase:'inventoryManage',shift:'posManage',policy:'payments',request:'reservations',reminder:'reservations'};
+export const operationPermission:Record<OperationKind,Permission>={maintenance:'maintenance',supplier:'suppliers',purchase:'purchasing',shift:'shifts',policy:'bookingPolicies',request:'guestRequests',reminder:'reminders'};
 export const operationModule:Record<OperationKind,Module>={maintenance:'maintenance',supplier:'suppliers',purchase:'purchasing',shift:'shifts',policy:'policies',request:'guestBooking',reminder:'reminders'};
 export const canOperate=(user:Access,kind:OperationKind)=>moduleEnabled(user,operationModule[kind])&&hasPermission(user,operationPermission[kind]);
 export function localDay(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Paramaribo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}

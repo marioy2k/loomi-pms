@@ -33,3 +33,9 @@ On a systemd server with the existing `loomi-backup.service` and `loomi-backup.t
 ## Domain login
 
 Set `APP_URL` to the exact address used in the browser. When using `https://loomi.bitwisesr.com`, set `APP_URL=https://loomi.bitwisesr.com` and `COOKIE_SECURE=true` in the service environment, then recreate the container. To also use the LAN IP, set `ALLOWED_ORIGINS=http://10.10.111.47` and `COOKIE_SECURE=auto`. This keeps cookies secure on HTTPS and permits host-only cookies on the explicitly allowed HTTP IP. Sign in separately on each address; sessions are not shared between hosts. The public HTTPS proxy can forward to `http://10.10.111.47:80`; Nginx is not required on the Loomi server. Writes are accepted only from `APP_URL` or the comma-separated `ALLOWED_ORIGINS`; all other origins are rejected.
+
+## Staff teams and independent permissions
+
+Choose Front desk, Housekeeping, Accounting, Cashier/POS, Swimming or Maintenance when editing staff, then grant or remove each action. Collecting reservation payments, refunding reservation payments, changing nightly rates, viewing Accounting and editing Accounting are separate permissions. Swimming sales, voucher redemption, pool settings and refunds are independent of Accounting and POS. Presets replace the selected actions when explicitly chosen; later checkbox changes retain the team label. Existing payment/rate access is preserved once by migration 0013; unintended swimming access is removed. Super Admins retain full access and the owner is protected.
+
+Accounting opens on Payments and shows money received, money paid out, guest balances and held deposits. Paid guests stay visible in Guest balances. Reservation changes refresh Accounting automatically; Refresh payments reloads saved records. Profit reports still use completed nights rather than payment receipt dates.

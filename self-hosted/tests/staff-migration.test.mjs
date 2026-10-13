@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+const db=new DatabaseSync(':memory:');
+db.exec('CREATE TABLE staff(email TEXT PRIMARY KEY,permissions TEXT)');
+db.prepare('INSERT INTO staff VALUES(?,?)').run('existing@example.test',JSON.stringify(['payments','reservations','housekeeping']));
+db.exec(readFileSync(new URL('../drizzle/0013_independent_staff_permissions.sql',import.meta.url),'utf8'));
+const row=db.prepare('SELECT * FROM staff').get();const perms=JSON.parse(row.permissions);
+for(const flag of ['bookingPayments','bookingRates','bookingRefunds','accountingView','bookingPolicies','calendar','guests','invoices'])assert(perms.includes(flag));
+for(const flag of ['dayPasses','passManage','passCheck','passRefund'])assert(!perms.includes(flag));
+assert.equal(row.team,'custom');assert.equal(perms.length,new Set(perms).size);
+console.log('PASS: legacy booking/accounting access preserved without adding swimming; team migration retains data');
