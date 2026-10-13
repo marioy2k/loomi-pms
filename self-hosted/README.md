@@ -29,3 +29,7 @@ Production compilation and TypeScript checks were verified on the deployed serve
 My account shows the signed-in user's name, email and role. Backup & restore shows server backup metadata only to Super Admins with backup access.
 
 On a systemd server with the existing `loomi-backup.service` and `loomi-backup.timer`, install `tools/backup-status.py` as `/usr/local/sbin/loomi-backup-status` and the two units in `deploy/` into `/etc/systemd/system/`. Run `systemctl daemon-reload`, `systemctl enable --now loomi-backup-status.timer`, and `systemctl start loomi-backup-status.service`. Add a read-only Compose bind mount `/var/lib/loomi/backup-status:/run/loomi-backups:ro` to the Loomi service and recreate the container. No database or Docker socket is exposed through this mount. The status is refreshed every minute; the app flags metadata older than five minutes. Times are displayed in America/Paramaribo, using the timer's actual next run rather than assuming a timezone.
+
+## Domain login
+
+Set `APP_URL` to the exact address used in the browser. When using `https://loomi.bitwisesr.com`, set `APP_URL=https://loomi.bitwisesr.com` and `COOKIE_SECURE=true` in the service environment, then recreate the container. The public HTTPS proxy can forward to `http://10.10.111.47:80`; Nginx is not required on the Loomi server. Use the HTTPS domain for sign-in: writes from a different origin (including the direct IP) are rejected. This prevents cross-site requests.
