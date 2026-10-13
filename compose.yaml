@@ -12,6 +12,7 @@ services:
       COOKIE_SECURE: "false"
     volumes:
       - loomi_data:/app/data
+      - /var/lib/loomi/backup-status:/run/loomi-backups:ro
     secrets:
       - admin_password
     healthcheck:

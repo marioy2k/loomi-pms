@@ -22,3 +22,9 @@ Update source, retain your environment settings, secrets and data volume, then r
 ## Validation
 
 Production compilation and TypeScript checks were verified on the deployed server. `server-smoke.mjs` exercises application writes and password changes against disposable QA data; never run it against a live customer database.
+
+## Automatic backup status
+
+My account shows the signed-in user's name, email and role. Backup & restore shows server backup metadata only to Super Admins with backup access.
+
+On a systemd server with the existing `loomi-backup.service` and `loomi-backup.timer`, install `tools/backup-status.py` as `/usr/local/sbin/loomi-backup-status` and the two units in `deploy/` into `/etc/systemd/system/`. Run `systemctl daemon-reload`, `systemctl enable --now loomi-backup-status.timer`, and `systemctl start loomi-backup-status.service`. Add a read-only Compose bind mount `/var/lib/loomi/backup-status:/run/loomi-backups:ro` to the Loomi service and recreate the container. No database or Docker socket is exposed through this mount. The status is refreshed every minute; the app flags metadata older than five minutes. Times are displayed in America/Paramaribo, using the timer's actual next run rather than assuming a timezone.

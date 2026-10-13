@@ -1,0 +1,5 @@
+[Unit]
+Description=Publish Loomi backup status
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/loomi-backup-status
