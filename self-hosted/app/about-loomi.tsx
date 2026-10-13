@@ -7,6 +7,6 @@ export default function AboutLoomi() {
     <p><strong>{releaseLabel}</strong></p>
     <p><LocalizedText text={"Loomi: Turn on the brilliant way to manage stays."}/></p>
     <h3><LocalizedText text={"What’s new"}/></h3>
-    <ul style={{listStyle: 'disc', paddingLeft: 22}}>{releaseChanges.map(change => <li key={change}>{change}</li>)}</ul>
+    <ul style={{listStyle: 'disc', paddingLeft: 22}}>{releaseChanges.map(change => <li key={change}><LocalizedText>{change}</LocalizedText></li>)}</ul>
   </section>;
 }
