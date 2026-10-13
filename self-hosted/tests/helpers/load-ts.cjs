@@ -1,0 +1,4 @@
+const fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
+const root=path.resolve(__dirname,'../..'),cache=new Map();
+function loadTs(file){const filename=path.resolve(root,file);if(cache.has(filename))return cache.get(filename).exports;const module={exports:{}};cache.set(filename,module);const code=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new Function('require','module','exports',code)(specifier=>{if(specifier.startsWith('@/')){const target=specifier.slice(2);return target.endsWith('.mjs')?require(path.join(root,target)):loadTs(target.endsWith('.ts')?target:target+'.ts')}return require(specifier)},module,module.exports);return module.exports;}
+module.exports={loadTs};

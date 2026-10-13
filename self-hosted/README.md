@@ -43,3 +43,7 @@ Accounting opens on Payments and shows money received, money paid out, guest bal
 ## Interface language
 
 Choose English or Dutch in Settings → Language. The selector is available to every signed-in account; the login screen also respects the saved choice. The choice is saved in this browser using `loomi-language`. Labels, help text, notifications, fixed status/category names and generated receipt/invoice/voucher labels are translated through React components and shared helpers; dates and currency on the reservation and Accounting screens use the selected locale. Reservation/payment identifiers, guest-entered names and notes, permissions and saved financial amounts retain their original values. Switching language does not reload the application or reset form state.
+
+## Reservation currencies
+
+New reservations can use USD, EUR or SRD independently of the property's default room/POS currency. Choosing a currency clears the draft nightly rate and payment so staff enter amounts in that currency; no automatic exchange rate is used. Saved reservation currencies are fixed. Legacy bookings without a currency continue to use the property currency. Payments, refunds, guest history, policy balances and reports follow each reservation's currency. Outstanding amounts and property performance are grouped by currency. Room/POS charges retain their own currency; invoices offer separate currency views when a reservation has charges in more than one currency.
