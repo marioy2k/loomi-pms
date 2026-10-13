@@ -1,4 +1,12 @@
 export const dutch={
+ "Guest details": "Klantgegevens",
+ "Room & stay": "Kamer en verblijf",
+ "Payment": "Betaling",
+ "Previous": "Vorige",
+ "Next": "Volgende",
+ "Enter the customer details, then continue to the stay.": "Vul de klantgegevens in en ga daarna naar het verblijf.",
+ "Choose the room, stay dates and nightly rate.": "Kies de kamer, verblijfsdatums en prijs per nacht.",
+ "Enter the payment and save the reservation.": "Vul de betaling in en sla de reservering op.",
  "Overview": "Overzicht",
  "Reservations": "Reserveringen",
  "Room calendar": "Kamerkalender",
