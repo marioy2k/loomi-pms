@@ -1,3 +1,4 @@
+import {isAllowedOrigin} from './origins.mjs';
 import {DatabaseSync,backup} from 'node:sqlite';
 import {getLicencePlan, validateAddOns, licencePricing, licenceAddOns} from './plans.mjs';
 import {randomBytes,randomUUID,scryptSync,timingSafeEqual,createHash,verify,createPublicKey} from 'node:crypto';
@@ -42,5 +43,5 @@ let instance;
 export function store(){if(!instance){const data=process.env.DATA_DIR||join(process.cwd(),'data');instance=new Store(join(data,'loomi.sqlite'),join(process.cwd(),'drizzle'));if(!instance.setting('ownerEmail')){const password=readFileSync(process.env.ADMIN_PASSWORD_FILE||'/run/secrets/admin_password','utf8').trim();instance.bootstrap(process.env.ADMIN_EMAIL,password,process.env.ADMIN_NAME||'Administrator')}}return instance}
 export function licenceStatus(){let key='';try{key=readFileSync(process.env.LICENSE_PUBLIC_KEY_FILE||'/run/secrets/licence_public_key','utf8')}catch{}return store().licence(key)}
 export function requireLicence(){const status=licenceStatus();if(!status.valid)throw Error(status.error||'A valid Loomi PMS licence is required');return status}
-export function checkOrigin(request){const configured=process.env.APP_URL;if(!configured)throw Error('APP_URL must be configured');if(request.headers.get('origin')!==new URL(configured).origin)throw Error('Request origin rejected');if(!request.headers.get('content-type')?.startsWith('application/json'))throw Error('JSON request required')}
+export function checkOrigin(request){const configured=process.env.APP_URL;if(!configured)throw Error('APP_URL must be configured');if(!isAllowedOrigin(request))throw Error('Request origin rejected');if(!request.headers.get('content-type')?.startsWith('application/json'))throw Error('JSON request required')}
 

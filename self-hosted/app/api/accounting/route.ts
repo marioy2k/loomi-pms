@@ -1,3 +1,4 @@
+import {isAllowedOrigin} from '@/runtime/origins.mjs';
 import {moduleEnabled} from '@/lib/modules';
 import {requestedProperty} from '@/lib/properties';
 import {database} from '@/db/raw';
@@ -19,7 +20,7 @@ export async function GET(req:Request){try{
  }catch(e){console.error(e);return Response.json({error:'Unable to load accounting records. Please retry.'},{status:503});}}
 export async function POST(req:Request){try{
  const user=await access();if(!moduleEnabled(user,'accounting'))return Response.json({error:'This company feature is disabled or not included in the licence'},{status:403});if(!user||!hasPermission(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});
- if(req.headers.get('origin')&&new URL(process.env.APP_URL!).origin!==req.headers.get('origin'))return Response.json({error:'Invalid request origin'},{status:403});
+ if(!isAllowedOrigin(req))return Response.json({error:'Invalid request origin'},{status:403});
  const propertyId=requestedProperty(req);if(!canAccessProperty(user,propertyId))return Response.json({error:'Property access denied'},{status:403});
  return Response.json(await saveAccounting(database(),propertyId,await req.json(),user.email));
  }catch(e){console.error(e);return accountingError(e);}}
