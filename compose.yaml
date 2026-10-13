@@ -5,28 +5,22 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     environment:
-      APP_URL: ${APP_URL:?Set APP_URL in .env}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      APP_URL: ${APP_URL:-http://localhost}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-owner@example.com}
       ADMIN_NAME: ${ADMIN_NAME:-Administrator}
-      COOKIE_SECURE: "true"
-    secrets:
-      - admin_password
-      - licence_public_key
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+      COOKIE_SECURE: "false"
     volumes:
       - loomi_data:/app/data
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    secrets:
+      - admin_password
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
-      retries: 3
+      start_period: 40s
 secrets:
   admin_password:
-    file: ./secrets/admin_password
-  licence_public_key:
-    file: ./secrets/licence_public_key
+    file: ./self-hosted/secrets/admin_password
 volumes:
   loomi_data:

@@ -2,6 +2,7 @@ node_modules/
 .next/
 data/
 secrets/
-.env
+.env*
 *.pem
+*.sqlite*
 *.tsbuildinfo

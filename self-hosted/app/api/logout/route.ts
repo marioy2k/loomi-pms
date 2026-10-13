@@ -1,1 +1,2 @@
 import {cookies} from 'next/headers';import {checkOrigin,store} from '@/runtime/core.mjs';export async function POST(req:Request){try{checkOrigin(req);const c=await cookies();store().logout(c.get('loomi_session')?.value);c.delete('loomi_session');return Response.json({ok:true})}catch{return Response.json({error:'Invalid request'},{status:403})}}
+
