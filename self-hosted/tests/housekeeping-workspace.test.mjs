@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const source=readFileSync(new URL('../app/pms-client.tsx',import.meta.url),'utf8');
+const helper=source.match(/function housekeepingWorkspace[^\n]+/)[0].replace(':Access','').replace('(a as Access&{team?:string})','a');
+const available=source.match(/function availableViews[^\n]+/)[0].replace(':Access','');
+const names=['Rooms','Overview','Reservations','Housekeeping','Inventory','Settings'];
+const context={views:names.map(n=>[n,null]),viewModule:{Rooms:'housekeeping',Inventory:'inventory'},moduleEnabled:(a,m)=>!a.disabled?.includes(m),can:(a,p)=>a.permissions.includes(p),canViewInventory:a=>a.permissions.includes('inventoryRequest'),canViewAccounting:()=>false,canViewPasses:()=>false,operationKinds:[],canOperate:()=>false};
+vm.createContext(context);vm.runInContext(helper+'\n'+available,context);
+const menu=a=>Array.from(context.availableViews(a),row=>row[0]);
+test('housekeeping team gets only rooms and inventory even with extra overview rights',()=>assert.deepEqual(menu({role:'employee',team:'housekeeping',permissions:['overview','housekeeping','inventoryRequest','reservations']}),['Rooms','Inventory']));
+test('legacy housekeeping preset gets the same workspace',()=>assert.deepEqual(menu({role:'employee',permissions:['overview','housekeeping','inventoryRequest']}),['Rooms','Inventory']));
+test('front desk, custom staff and admins retain their usual navigation',()=>{for(const a of [{role:'employee',team:'frontdesk'},{role:'employee',team:'custom'},{role:'admin',team:'housekeeping'}]){const result=menu({...a,permissions:['overview','housekeeping','inventoryRequest','reservations']});assert.ok(result.includes('Overview'));assert.ok(result.includes('Settings'));assert.ok(!result.includes('Rooms'));}});
+test('workspace respects disabled modules and removed permissions',()=>{assert.deepEqual(menu({role:'employee',team:'housekeeping',permissions:['housekeeping']}),['Rooms']);assert.deepEqual(menu({role:'employee',team:'housekeeping',permissions:['housekeeping','inventoryRequest'],disabled:['housekeeping']}),['Inventory']);});
