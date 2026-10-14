@@ -253,3 +253,5 @@ input[type=file]::file-selector-button{margin-right:12px;padding:4px 10px;border
 
 .invoice-print-actions{position:sticky;top:0;z-index:2;background:var(--background,#fff);padding:12px 0;border-bottom:1px solid #ddd;margin-bottom:12px}
 @media print{.invoice-print-actions{display:none!important}}
+
+.housekeeping-worklist ol{list-style:none;margin:0;padding:0 24px 20px;display:grid;gap:10px}.housekeeping-worklist li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e2e8e9;border-radius:8px;background:#f9fbfa}.housekeeping-worklist li strong{display:block;color:#254f43}.housekeeping-worklist li span:not(.badge){display:block;font-size:14px;color:#536d6e;margin-top:4px}.housekeeping-worklist-empty{padding:0 24px 24px;color:#536d6e}@media(max-width:760px){.housekeeping-worklist ol{padding:0 14px 16px}.housekeeping-worklist li{align-items:flex-start;flex-wrap:wrap}}
