@@ -4,7 +4,7 @@ import {Access,can} from '@/lib/permissions';
 import {Company,companyHeader} from '@/lib/company';
 import {validLogo} from '@/lib/logo';
 import {posDay} from '@/lib/pos';
-export type SwimmingSettings={property_id:number;adult_price:number;child_price:number;instructions:string;updated:string};
+export type SwimmingSettings={property_id:number;adult_price:number;child_price:number;prices?:string;instructions:string;updated:string};
 export type SwimmingVoucher={id:string;property_id:number;code:string;created:string;valid_date:string;guest:string;adults:number;children:number;adult_price:number;child_price:number;total:number;currency:string;instructions:string;status:string;payment_id:string;method:string;redeemed_at:string;redeemed_by:string;refund_id:string;actor:string;paid:boolean};
 export const voucherCode=(id:string,propertyId:number)=>'SW-'+propertyId+'-'+id.replaceAll('-','').slice(0,16).toUpperCase();
 export function voucherStatus(v:SwimmingVoucher,today=posDay()){return v.status==='issued'?(v.valid_date<today?'Expired':v.paid?(v.valid_date>today?'Upcoming':'Valid'):'Unpaid'):v.status==='redeemed'?'Redeemed':'Cancelled';}

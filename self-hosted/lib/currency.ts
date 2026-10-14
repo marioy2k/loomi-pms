@@ -1,0 +1,7 @@
+export const currencies=['USD','SRD','EUR'] as const;
+export type Currency=typeof currencies[number];
+export const currencyLabels:Record<string,string>={USD:'US$ — USD',SRD:'SRD',EUR:'€ — EUR'};
+export const validCurrency=(v:unknown):v is Currency=>typeof v==='string'&&currencies.includes(v as Currency);
+export function priceMap(value:unknown):Record<string,number>{if(typeof value==='string'){try{const parsed=JSON.parse(value);return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return {}}}return value&&typeof value==='object'?value as Record<string,number>:{};}
+export function productPrice(product:{prices?:string;price:number},currency:string,base:string):number|null{const prices=priceMap(product.prices);return Object.keys(prices).length?(Number.isSafeInteger(prices[currency])&&prices[currency]>0?prices[currency]:null):currency===base?product.price:null;}
+export function swimmingPrices(settings:{prices?:string;adult_price:number;child_price:number}|null,currency:string,base:string):{adult:number;child:number}|null{if(!settings)return null;const prices=priceMap(settings.prices) as unknown as Record<string,{adult:number;child:number}>;if(Object.keys(prices).length){const p=prices[currency];return p&&Number.isSafeInteger(p.adult)&&p.adult>=0&&Number.isSafeInteger(p.child)&&p.child>=0?p:null;}return currency===base?{adult:settings.adult_price,child:settings.child_price}:null;}
