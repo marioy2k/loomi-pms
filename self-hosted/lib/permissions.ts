@@ -5,7 +5,7 @@ export type Access={email:string;name:string;role:'owner'|'superadmin'|'admin'|'
 export type Staff=Access&{active:boolean;password?:string;team?:string};
 export const allPermissions=Object.keys(permissionLabels) as Permission[];
 const permissionModule:Partial<Record<Permission,Module>>={invoices:'invoices',overview:'overview',calendar:'calendar',guests:'guests',bookingPayments:'payments',bookingRefunds:'payments',bookingRates:'payments',accountingView:'accounting',passManage:'swimming',passRefund:'swimming',suppliers:'suppliers',purchasing:'purchasing',shifts:'shifts',bookingPolicies:'policies',guestRequests:'guestBooking',reminders:'reminders',reservations:'reservations',payments:'accounting',rooms:'rooms',property:'property',maintenance:'maintenance',audit:'audit',dashboard:'dashboard',housekeeping:'housekeeping',pos:'pos',posManage:'pos',dayPasses:'swimming',passCheck:'swimming',inventoryRequest:'inventory',inventoryApprove:'inventory',inventoryManage:'inventory'};
-export const hasPermission=(a:Access|null,p:Permission)=>!!a&&(isSuperAdmin(a)||a.permissions.includes(p));
+export const hasPermission=(a:Access|null,p:Permission)=>!!a&&(isSuperAdmin(a)||(a.role==='admin'&&['housekeeping','inventoryRequest'].includes(p))||a.permissions.includes(p));
 export const can=(a:Access|null,p:Permission)=>hasPermission(a,p)&&(!permissionModule[p]||moduleEnabled(a,permissionModule[p]!));
 
 export const canAccessProperty=(a:Access|null,id:number)=>!!a&&(a.role!=='employee'||!!a.propertyIds?.includes(id));

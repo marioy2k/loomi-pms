@@ -3,7 +3,7 @@ import {isSuperAdmin,type Access} from '@/lib/permissions';
 export async function resetHotelData(db:any,user:Access|null,confirmation:unknown){
  if(!isSuperAdmin(user))return Response.json({error:'Super admin access required'},{status:403});
  if(confirmation!=='RESET ALL HOTEL DATA')return Response.json({error:'Type RESET ALL HOTEL DATA to confirm'},{status:400});
- const tables=['transactions','accounting_records','pos_orders','pos_closings','swimming_vouchers','inventory_requests','inventory_movements','inventory_items'];
+ const tables=['housekeeping_assignments','housekeeping_issues','transactions','accounting_records','pos_orders','pos_closings','swimming_vouchers','inventory_requests','inventory_movements','inventory_items'];
  const statements=tables.map(table=>db.prepare('DELETE FROM '+table));
  statements.push(db.prepare("DELETE FROM operations WHERE kind NOT IN ('policy','supplier')"));
  statements.push(db.prepare('INSERT OR IGNORE INTO ledger_meta(id) SELECT id FROM property'));
