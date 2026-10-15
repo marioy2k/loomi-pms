@@ -1,4 +1,14 @@
 export const dutch={
+ "Vehicles":"Voertuigbeheer",
+ "Vehicle management":"Voertuigbeheer",
+ "Vehicle security":"Voertuigbeveiliging",
+ "Security":"Beveiliging",
+ "Security supervisor":"Beveiligingssupervisor",
+ "View vehicle dashboard and history":"Voertuigoverzicht en historie bekijken",
+ "Register vehicle departures, returns and defects":"Vertrek, terugkomst en mankementen registreren",
+ "Review and resolve vehicle defects":"Mankementen beoordelen en afhandelen",
+ "Manage vehicles and release vehicle availability":"Voertuigen beheren en vrijgeven",
+ "Security vehicle dispatch, returns, defect photos and supervisor assessment.":"Voertuiguitgifte, terugkomst, foto's van mankementen en beoordeling door supervisors.",
  "Guest details": "Klantgegevens",
  "Room & stay": "Kamer en verblijf",
  "Payment": "Betaling",
@@ -1492,3 +1502,4 @@ export function translateText(text,locale){
  for(const [pattern,render] of patterns){const m=key.match(pattern);if(m)return text.replace(key,render(m));}
  return text;
 }
+
