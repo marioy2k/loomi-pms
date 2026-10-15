@@ -1,6 +1,6 @@
 # Voertuigbeheer voor beveiliging
 
-De module **Vehicles / Voertuigbeheer** is onderdeel van de optionele Operations-modulebundel en kan afzonderlijk worden uitgezet in de bedrijfsmodules. Bestaande aangepaste licenties moeten `vehicles` expliciet bevatten. Licenties zonder Operations krijgen de module niet automatisch. De demo bevat de module.
+De module **Vehicles / Voertuigbeheer** is een afzonderlijke optionele add-on van **US$15 per maand of US$150 per jaar per locatie**. Voertuigbeheer wordt los geselecteerd bij Licentie & optionele extra’s en is niet inbegrepen in de Operations-add-on. Het bedrag telt mee in de totale pakketprijs. De gratis demo bevat alle add-ons, inclusief Voertuigbeheer. Bestaande aangepaste licenties moeten `vehicles` expliciet bevatten. De bedrijfsmodules kunnen de aangekochte module afzonderlijk uitschakelen.
 
 ## Activeren
 

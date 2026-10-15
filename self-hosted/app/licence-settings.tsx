@@ -4,14 +4,14 @@ import {useLanguage,LocalizedText,LangInput,LangTextarea,LangButton,LangSelectVa
 import {useEffect,useState} from 'react';
 import {readApiResponse} from '@/lib/api-response';
 import {licenceDay,periodEnd,type LicenceConfig} from '@/lib/licence';
-import {roomPackages,addOnPackages,packagePrice,type RoomPackage,type AddOn} from '@/lib/packages';
+import {roomPackages,addOnPackages,allAddOns,packagePrice,type RoomPackage,type AddOn} from '@/lib/packages';
 import {toast} from '@/lib/localized-toast';
 
 export default function LicenceSettings({onSaved}:{onSaved:()=>Promise<void>}){const {locale}=useLanguage();const usd=(n:number)=>new Intl.NumberFormat(locale==='nl'?'nl-NL':'en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
  const [data,setData]=useState<any>(null),[form,setForm]=useState<LicenceConfig|null>(null),[error,setError]=useState(''),[saving,setSaving]=useState(false);
  async function load(){try{const x=await readApiResponse<any>(await fetch('/api/license'));setData(x);const migrated=x.config.packageVersion===2;setForm(migrated?x.config:{...x.config,packageVersion:2,roomPlan:'standard',addOns:[],plan:'standard',period:'monthly',startsOn:licenceDay()});setError('')}catch(e){setError((e as Error).message)}}
  useEffect(()=>{load()},[]);
- const demo=form?.period==='21-days';const extras:AddOn[]=demo?['swimming','pos','accounting','operations']:form?.addOns||[];
+ const demo=form?.period==='21-days';const extras:AddOn[]=demo?[...allAddOns]:form?.addOns||[];
  const price=form?packagePrice(form.roomPlan!,extras):null;
  let end:string|null=null;try{if(form)end=periodEnd(form.startsOn,form.period,form.endsOn)}catch{}
  return <section className="panel licence-settings"><div className="section-heading"><div><h2><LocalizedText text={"Licence & optional extras"}/></h2><p><LocalizedText text={"Super admin only · USD per property · one licence for your room package and add-ons."}/></p></div><LangButton className="secondary" disabled={saving} onClick={load}><LocalizedText text={"Refresh"}/></LangButton></div>{error&&<p role="alert"><LocalizedText>{error}</LocalizedText></p>}{!form?<p><LocalizedText text={"Loading licence…"}/></p>:<>

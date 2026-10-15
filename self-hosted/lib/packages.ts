@@ -1,8 +1,9 @@
 import {allModules,type Module} from '@/lib/modules';
 export const roomPackages={small:{name:'Small',minRooms:1,maxRooms:10,monthlyUsd:49,yearlyUsd:490},standard:{name:'Standard',minRooms:11,maxRooms:25,monthlyUsd:89,yearlyUsd:890},hotel:{name:'Hotel',minRooms:26,maxRooms:50,monthlyUsd:149,yearlyUsd:1490}} as const;
 export type RoomPackage=keyof typeof roomPackages;
-export const addOnPackages={swimming:{name:'Swimming Day Passes',monthlyUsd:15,yearlyUsd:150,modules:['swimming']},pos:{name:'Point of Sale',monthlyUsd:25,yearlyUsd:250,modules:['pos']},accounting:{name:'Accounting',monthlyUsd:20,yearlyUsd:200,modules:['accounting']},operations:{name:'Operations',monthlyUsd:20,yearlyUsd:200,modules:['vehicles','inventory','maintenance','suppliers','purchasing','shifts','policies','guestBooking','reminders','dashboard']}} as const;
+export const addOnPackages={vehicles:{name:'Vehicle management',monthlyUsd:15,yearlyUsd:150,modules:['vehicles']},swimming:{name:'Swimming Day Passes',monthlyUsd:15,yearlyUsd:150,modules:['swimming']},pos:{name:'Point of Sale',monthlyUsd:25,yearlyUsd:250,modules:['pos']},accounting:{name:'Accounting',monthlyUsd:20,yearlyUsd:200,modules:['accounting']},operations:{name:'Operations',monthlyUsd:20,yearlyUsd:200,modules:['inventory','maintenance','suppliers','purchasing','shifts','policies','guestBooking','reminders','dashboard']}} as const;
 export type AddOn=keyof typeof addOnPackages;
+export const allAddOns=Object.keys(addOnPackages) as AddOn[];
 const extraModules=new Set<string>(Object.values(addOnPackages).flatMap(x=>[...x.modules]));
 export const coreModules=allModules.filter(key=>!extraModules.has(key));
 export function packageModules(addOns:AddOn[]):Module[]{return [...new Set([...coreModules,...addOns.flatMap(key=>[...addOnPackages[key].modules])])] as Module[];}
