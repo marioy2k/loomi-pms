@@ -1,3 +1,4 @@
+import {readExchangeRates} from '@/lib/exchange-rates';
 import {isAllowedOrigin} from '@/runtime/origins.mjs';
 import {moduleEnabled} from '@/lib/modules';
 import {requestedProperty} from '@/lib/properties';
@@ -16,7 +17,7 @@ export async function GET(req:Request){try{
  const placeholders=allowed.map(()=>'?').join(','),ids=allowed.map(p=>p.id);
  const result=await db.batch([db.prepare(`SELECT id,data FROM property WHERE id IN (${placeholders}) ORDER BY id`).bind(...ids),db.prepare(`SELECT * FROM transactions WHERE property_id IN (${placeholders}) ORDER BY date DESC,created DESC,id DESC`).bind(...ids),db.prepare(`SELECT * FROM accounting_records WHERE property_id IN (${placeholders}) ORDER BY date DESC,created DESC`).bind(...ids)]);
  const properties=result[0].results.map((p:any)=>{const state=JSON.parse(p.data);return {id:p.id,state:{...state,bookings:state.bookings.map(({identification,notes,...b}:any)=>({...b,notes:''}))}}});
- return Response.json({transactions:result[1].results,records:result[2].results,properties});
+ return Response.json({exchangeRates:(await readExchangeRates(db)).history,transactions:result[1].results,records:result[2].results,properties});
  }catch(e){console.error(e);return Response.json({error:'Unable to load accounting records. Please retry.'},{status:503});}}
 export async function POST(req:Request){try{
  const user=await access();if(!moduleEnabled(user,'accounting'))return Response.json({error:'This company feature is disabled or not included in the licence'},{status:403});if(!user||!hasPermission(user,'payments'))return Response.json({error:'Accounting permission required'},{status:403});

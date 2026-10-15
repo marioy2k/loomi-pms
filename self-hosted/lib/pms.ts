@@ -1,7 +1,7 @@
 import {localDayOffset} from '@/runtime/local-day.mjs';
 import {Company,Appearance,validateCompany} from '@/lib/company';
 export type Room={id:string;type:string;rate:number;housekeeping:string};
-export type Booking={currency?:string;policy?:{depositPercent:number;cancellationPercent:number;freeCancellationDays:number;terms:string};cancellationFee?:number;cancelledAt?:string;guestId?:string;identification?:{type:'ID card'|'Passport'|'Driver licence';number:string;country:string;expiry:string};id:string;guest:string;email:string;phone:string;room:string;arrival:string;departure:string;status:string;rate:number;paid:number;paymentMethod?:string;notes:string};
+export type Booking={exchangeRate?:{id:number;effectiveFrom:string;rates:{SRD:number;EUR:number}};currency?:string;policy?:{depositPercent:number;cancellationPercent:number;freeCancellationDays:number;terms:string};cancellationFee?:number;cancelledAt?:string;guestId?:string;identification?:{type:'ID card'|'Passport'|'Driver licence';number:string;country:string;expiry:string};id:string;guest:string;email:string;phone:string;room:string;arrival:string;departure:string;status:string;rate:number;paid:number;paymentMethod?:string;notes:string};
 export const supportedCurrencies=['USD','EUR','SRD'] as const;
 export function bookingCurrency(b:Pick<Booking,'currency'>,state:Pick<State,'currency'>){return b.currency||state.currency;}
 export function bookingAmountsByCurrency(bookings:Booking[],state:State,amount:(booking:Booking)=>number){const totals=new Map<string,number>();for(const b of bookings){const currency=bookingCurrency(b,state);totals.set(currency,(totals.get(currency)||0)+amount(b));}return [...totals.entries()];}

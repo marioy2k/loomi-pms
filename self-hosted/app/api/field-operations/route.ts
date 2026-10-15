@@ -1,0 +1,10 @@
+import {access} from '@/lib/access';
+import {requestedProperty} from '@/lib/properties';
+import {isAllowedOrigin} from '@/runtime/origins.mjs';
+import {store} from '@/runtime/core.mjs';
+import {loadField,saveField,fieldPhoto} from '@/runtime/field-operations.mjs';
+import {FleetError} from '@/runtime/fleet.mjs';
+export const runtime='nodejs';
+const error=(e:unknown)=>{if(e instanceof FleetError)return Response.json({error:e.message},{status:e.status});console.error('Field operations failed',e);return Response.json({error:'Unable to process this record. Refresh and retry.'},{status:503})};
+export async function GET(req:Request){try{const user=await access(),url=new URL(req.url),id=requestedProperty(req),scope=url.searchParams.get('scope')||'security';if(url.searchParams.has('photo')){if(scope!=='security')return Response.json({error:'Invalid photo scope'},{status:400});const p=fieldPhoto(store().db,id,user,url.searchParams.get('photo'));return new Response(Buffer.from(p.data,'base64'),{headers:{'Content-Type':p.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})}return Response.json(loadField(store().db,id,user,scope),{headers:{'Cache-Control':'private, no-store'}})}catch(e){return error(e)}}
+export async function POST(req:Request){try{const user=await access();if(!user||!isAllowedOrigin(req)||!req.headers.get('content-type')?.startsWith('application/json'))return Response.json({error:'Invalid access or request origin'},{status:403});const reader=req.body?.getReader();if(!reader)return Response.json({error:'Request body required'},{status:400});const chunks:Uint8Array[]=[];let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>6000000){await reader.cancel();return Response.json({error:'Maximum request size is 6 MB'},{status:413})}chunks.push(value)}let x;try{x=JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{return Response.json({error:'Invalid JSON'},{status:400})}return Response.json(saveField(store().db,requestedProperty(req),user,new URL(req.url).searchParams.get('scope')||'security',x))}catch(e){return error(e)}}
