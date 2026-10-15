@@ -47,3 +47,8 @@ Choose English or Dutch in Settings → Language. The selector is available to e
 ## Reservation currencies
 
 New reservations can use USD, EUR or SRD independently of the property's default room/POS currency. Choosing a currency clears the draft nightly rate and payment so staff enter amounts in that currency; no automatic exchange rate is used. Saved reservation currencies are fixed. Legacy bookings without a currency continue to use the property currency. Payments, refunds, guest history, policy balances and reports follow each reservation's currency. Outstanding amounts and property performance are grouped by currency. Room/POS charges retain their own currency; invoices offer separate currency views when a reservation has charges in more than one currency.
+
+
+## Vehicle security
+
+See [VEHICLE-MANAGEMENT.md](VEHICLE-MANAGEMENT.md) for vehicle departures, returns, defect photos, security staff permissions and supervisor release.
