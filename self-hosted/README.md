@@ -1,6 +1,6 @@
 # Loomi PMS — self-hosted
 
-This source matches the running October 12, 2026 server version. It includes reservations, guests, housekeeping, Swimming Day Passes, Point of Sale, Accounting, Inventory and Operations; local accounts, staff permissions, password changes, licence settings and hotel data reset.
+This source matches the running October 22, 2026 server version. It includes reservations, guests, housekeeping, Swimming Day Passes, Point of Sale, Accounting, Inventory and Operations; local accounts, staff permissions, password changes, licence settings and hotel data reset.
 
 ## Install
 
@@ -52,3 +52,7 @@ New reservations can use USD, EUR or SRD independently of the property's default
 ## Vehicle security
 
 See [VEHICLE-MANAGEMENT.md](VEHICLE-MANAGEMENT.md) for vehicle departures, returns, defect photos, security staff permissions and supervisor release.
+
+## October 22 server updates
+
+Includes UniFi guest Wi-Fi management, staff chat with attachments and linked records, browser push notifications, team conversations, session presence, and EUR display fixes. Database migrations 0018–0022 accompany these features. The Compose file remains configurable; server-specific settings, passwords and guest data are excluded.

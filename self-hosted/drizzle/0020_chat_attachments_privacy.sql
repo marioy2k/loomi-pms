@@ -1,0 +1,10 @@
+CREATE TABLE chat_messages_new(id INTEGER PRIMARY KEY AUTOINCREMENT,client_id TEXT NOT NULL,sender TEXT NOT NULL,recipient TEXT NOT NULL,body TEXT NOT NULL CHECK(length(body)<=2000),created INTEGER NOT NULL,read_at INTEGER,UNIQUE(sender,client_id));
+INSERT INTO chat_messages_new SELECT * FROM chat_messages;
+DROP TABLE chat_messages;
+ALTER TABLE chat_messages_new RENAME TO chat_messages;
+CREATE INDEX chat_messages_recipient ON chat_messages(recipient,read_at,id);
+CREATE INDEX chat_messages_thread ON chat_messages(sender,recipient,id);
+CREATE TABLE chat_attachments(id TEXT PRIMARY KEY,sender TEXT NOT NULL,recipient TEXT NOT NULL,filename TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,data TEXT NOT NULL,sha256 TEXT NOT NULL,created INTEGER NOT NULL,message_id INTEGER);
+CREATE INDEX chat_attachments_message ON chat_attachments(message_id);
+CREATE INDEX chat_attachments_pending ON chat_attachments(sender,message_id,created);
+CREATE TABLE chat_preferences(email TEXT PRIMARY KEY,show_last_seen INTEGER NOT NULL DEFAULT 1 CHECK(show_last_seen IN (0,1)),last_seen INTEGER);

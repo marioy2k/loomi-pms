@@ -1,0 +1,4 @@
+'use client';
+import {Fragment} from 'react';
+export function safeChatUrl(raw:string){try{const url=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password&&url.hostname.includes('.')?url.href:null}catch{return null}}
+export function ChatText({text}:{text:string}){const pattern=/(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+(?:com|org|net|nl|sr|io|co)(?:[/?#][^\s<>"']*)?/gi;const nodes=[];let last=0;for(const match of text.matchAll(pattern)){const start=match.index!,raw=match[0].replace(/[.,;:!?\])}]+$/,''),href=safeChatUrl(raw);nodes.push(<Fragment key={start}>{text.slice(last,start)}{href?<a href={href} target="_blank" rel="noopener noreferrer">{raw}</a>:raw}{match[0].slice(raw.length)}</Fragment>);last=start+match[0].length}nodes.push(text.slice(last));return <>{nodes}</>}
