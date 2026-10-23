@@ -1,4 +1,9 @@
 export const dutch={
+ "Sidebar":"Zijbalk",
+ "Automatically hide the sidebar and reveal it when you move near the left edge.":"Verberg de zijbalk automatisch en toon hem wanneer je de muis naar de linkerrand beweegt.",
+ "This preference is saved in this browser and takes effect immediately.":"Deze voorkeur wordt in deze browser bewaard en gaat direct in.",
+ "On phones and touch-only devices, open the sidebar using the menu button.":"Op telefoons en apparaten met alleen aanraakbediening open je de zijbalk met de menuknop.",
+
  "Auto-hide sidebar":"Zijbalk automatisch verbergen",
  "On":"Aan",
  "Off":"Uit",

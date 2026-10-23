@@ -3,13 +3,14 @@
 import {LocalizedText,useLanguage} from '@/app/language'
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { PanelLeftIcon, PinOffIcon } from "lucide-react"
+import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
@@ -322,16 +323,21 @@ function Sidebar({
   )
 }
 
-function SidebarAutoHideToggle() {
-  const { autoHide, setAutoHide, isMobile } = useSidebar()
-  const { locale } = useLanguage()
-  if (isMobile) return null
-  return <button type="button" className="sidebar-auto-hide-toggle" aria-pressed={autoHide}
-    title={locale === 'nl' ? 'Verschijn bij de linkerrand en verberg na het verlaten van de zijbalk.' : 'Reveal near the left edge and hide after leaving the sidebar.'}
-    onClick={() => setAutoHide(!autoHide)}>
-    <PinOffIcon size={15} /><LocalizedText text="Auto-hide sidebar" />
-    <span className="sidebar-auto-hide-status"><LocalizedText text={autoHide ? 'On' : 'Off'} /></span>
-  </button>
+function SidebarSettings() {
+  const { autoHide, setAutoHide } = useSidebar()
+  return <section className="panel settings sidebar-settings">
+    <h2><LocalizedText text="Sidebar" /></h2>
+    <p id="sidebar-auto-hide-help"><LocalizedText text="Automatically hide the sidebar and reveal it when you move near the left edge." /></p>
+    <div className="sidebar-settings-row">
+      <label id="sidebar-auto-hide-label" htmlFor="sidebar-auto-hide"><LocalizedText text="Auto-hide sidebar" /></label>
+      <div className="sidebar-settings-control">
+        <span><LocalizedText text={autoHide ? 'On' : 'Off'} /></span>
+        <Switch id="sidebar-auto-hide" checked={autoHide} onCheckedChange={setAutoHide} aria-labelledby="sidebar-auto-hide-label" aria-describedby="sidebar-auto-hide-help" />
+      </div>
+    </div>
+    <p><LocalizedText text="This preference is saved in this browser and takes effect immediately." /></p>
+    <p><LocalizedText text="On phones and touch-only devices, open the sidebar using the menu button." /></p>
+  </section>
 }
 
 function SidebarTrigger({
@@ -797,7 +803,7 @@ export {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarAutoHideToggle,
+  SidebarSettings,
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
