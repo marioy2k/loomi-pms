@@ -304,3 +304,5 @@ input[type=file]::file-selector-button{margin-right:12px;padding:4px 10px;border
 @media(prefers-reduced-motion:reduce){[data-auto-hide=true] [data-slot=sidebar-container]{transition:none}}
 
 .sidebar-settings>p{margin:14px 0;line-height:1.6}.sidebar-settings-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}.sidebar-settings-row>label{font-size:14px;font-weight:600;cursor:pointer;min-width:0}.sidebar-settings-control{display:flex;align-items:center;gap:12px;flex-shrink:0}.sidebar-settings-control>span{font-size:14px;color:var(--muted-foreground)}
+
+.invoice-details{margin:20px 0}.invoice-details>div{display:flex;gap:16px;margin:6px 0}.invoice-details dt{font-weight:600;min-width:160px}.invoice-details dd{margin:0;overflow-wrap:anywhere}

@@ -19,6 +19,7 @@ export const dutch={
  "Logged in":"Ingelogd",
  "Not logged in":"Niet ingelogd",
  "Green: logged in · Red: not logged in. Updates every 15 seconds. A valid session can remain after closing the browser.":"Groen: ingelogd · Rood: niet ingelogd. Wordt elke 15 seconden bijgewerkt. Een geldige sessie kan blijven bestaan na het sluiten van de browser.",
+ "Handled by (logged-in employee)":"Geholpen door (ingelogde medewerker)",
  "Guest Wi-Fi":"Gastenwifi",
  "Guest Wi-Fi (UniFi)":"Gastenwifi (UniFi)",
  "UniFi vouchers by stay duration, receipt voucher codes and Wi-Fi settings.":"UniFi-vouchers op basis van verblijfsduur, vouchercodes op bonnen en wifi-instellingen.",
