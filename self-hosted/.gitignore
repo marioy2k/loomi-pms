@@ -6,3 +6,7 @@ secrets/
 *.pem
 *.sqlite*
 *.tsbuildinfo
+
+# Tool caches and local dependency links
+.sites-runtime/
+node_modules

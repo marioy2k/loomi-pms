@@ -8,3 +8,6 @@ secrets
 .env*
 tests
 
+.sites-runtime
+AGENTS.md
+CLAUDE.md
