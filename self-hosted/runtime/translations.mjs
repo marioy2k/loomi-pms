@@ -1,4 +1,6 @@
 export const dutch={
+ "Reservations for your selected day":"Reserveringen voor de gekozen datum",
+ "For your selected day":"Voor de gekozen datum",
  "Green: online · Red: offline. Updates every 15 seconds. Closed or disconnected browsers go offline within 3 minutes.":"Groen: online · Rood: offline. Wordt elke 15 seconden vernieuwd. Gesloten of niet-verbonden browsers worden binnen 3 minuten offline weergegeven.",
  "Backup must be smaller than 64 MB":"De back-up moet kleiner zijn dan 64 MB",
  "Choose a backup smaller than 64 MB":"Kies een back-up kleiner dan 64 MB",

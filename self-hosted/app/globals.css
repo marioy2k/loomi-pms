@@ -263,3 +263,10 @@ input[type=file]::file-selector-button{margin-right:12px;padding:4px 10px;border
 .pos-workspace .stat-value{font-size:clamp(18px,1.8vw,30px);font-variant-numeric:tabular-nums}
 
 .exchange-rate-summary{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;padding:16px 20px;margin-bottom:20px;border:1px solid #d2e3d5;border-radius:10px;background:#f0f6f1;color:#174d40;font-size:14px}.exchange-rate-summary small{color:#536d6e}.exchange-rate-report{padding:14px 18px;margin:14px 0;border:1px solid #d2e3d5;border-radius:8px;background:#f7faf8;font-size:13px}.exchange-rate-report p{margin:8px 0}.exchange-rate-report small{display:block;margin-top:6px}.exchange-rate-settings>p{margin:16px 0}.exchange-rate-settings details{margin-top:24px}.exchange-rate-settings table{width:100%;font-size:13px}.exchange-rate-settings th,.exchange-rate-settings td{padding:10px;text-align:left}@media(max-width:600px){.exchange-rate-summary{gap:8px 16px}.exchange-rate-summary strong{width:100%}}
+
+/* Overview cards open the matching reservation list. */
+.overview-stat{text-align:left;width:100%;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.overview-stat:hover,.overview-stat[aria-pressed=true]{border-color:var(--primary,#347b6e);box-shadow:0 0 0 1px var(--primary,#347b6e)}
+.overview-stat:focus-visible,.overview-reservation-list:focus-visible{outline:3px solid var(--primary,#347b6e);outline-offset:3px}
+.overview-list-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.overview-reservation-list{scroll-margin-top:24px;min-width:0}
