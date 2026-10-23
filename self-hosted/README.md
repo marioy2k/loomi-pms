@@ -62,3 +62,7 @@ Includes UniFi guest Wi-Fi management, staff chat with attachments and linked re
 Summary cards, filters, forms and dialogs adapt to phone and tablet widths. Settings tabs wrap within the workspace; mobile navigation closes after selection and returns to the top of the selected screen. Wide record tables scroll within their panel.
 
 Next.js is pinned to 16.4.1 and React/React DOM to 19.2.9. Transitive security patches are recorded in `pnpm-workspace.yaml`; retain that file when building. Login limits apply per account, with a separate short global flood limit, and credential request bodies are capped at 4 KB. Booking requests enforce each staff member’s assigned properties.
+
+## Optional sidebar auto-hide
+
+On desktop, use **Auto-hide sidebar** beneath the Loomi logo. When enabled, the sidebar opens when the pointer is within 16 pixels of the left edge and hides shortly after the pointer leaves. It overlays the workspace instead of moving its contents. Keyboard navigation, the sidebar button and Ctrl/Cmd+B remain available. The menu stays open while editing sidebar controls or using pop-up controls. The preference is saved in this browser. Phones and touch-only devices retain manual navigation.

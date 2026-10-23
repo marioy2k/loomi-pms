@@ -3,7 +3,7 @@
 import {LocalizedText,useLanguage} from '@/app/language'
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, PinOffIcon } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -41,6 +41,8 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  autoHide: boolean
+  setAutoHide: (value: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -69,6 +71,22 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [autoHide, setAutoHide] = React.useState(false)
+  const [preferenceLoaded, setPreferenceLoaded] = React.useState(false)
+  const [canHover, setCanHover] = React.useState(false)
+  React.useEffect(() => {
+    try { setAutoHide(localStorage.getItem('loomi:sidebar-auto-hide') === 'true') } catch {}
+    setPreferenceLoaded(true)
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const update = () => setCanHover(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  React.useEffect(() => {
+    if (preferenceLoaded) try { localStorage.setItem('loomi:sidebar-auto-hide', String(autoHide)) } catch {}
+  }, [autoHide, preferenceLoaded])
+  const autoHideActive = autoHide && canHover && !isMobile
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -88,6 +106,51 @@ function SidebarProvider({
     },
     [setOpenProp, open]
   )
+
+  const setOpenRef = React.useRef(setOpen)
+  setOpenRef.current = setOpen
+  const previousAutoHide = React.useRef(false)
+  React.useEffect(() => {
+    if (autoHideActive) setOpenRef.current(false)
+    else if (previousAutoHide.current) setOpenRef.current(true)
+    previousAutoHide.current = autoHideActive
+  }, [autoHideActive])
+
+  React.useEffect(() => {
+    if (!autoHideActive) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let pointerInside = false
+    const sidebar = () => document.querySelector<HTMLElement>('[data-slot="sidebar-container"]')
+    const cancel = () => { if (timer) clearTimeout(timer); timer = undefined }
+    const schedule = () => {
+      if (!open || timer) return
+      timer = setTimeout(function closeWhenIdle() {
+        timer = undefined
+        const panel = sidebar(), focused = document.activeElement
+        const editing = panel?.contains(focused) && (focused?.matches('input,select,textarea,:focus-visible'))
+        const popup = document.querySelector('[data-slot="select-content"],[data-slot="dropdown-menu-content"],[data-slot="popover-content"],[role="dialog"]')
+        if (pointerInside) return
+        if (editing || popup) { timer = setTimeout(closeWhenIdle, 400); return }
+        setOpenRef.current(false)
+      }, 400)
+    }
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return
+      const rect = sidebar()?.getBoundingClientRect()
+      pointerInside = event.clientX <= 16 || !!(open && rect && event.clientX >= rect.left && event.clientX <= rect.right + 8 && event.clientY >= rect.top && event.clientY <= rect.bottom)
+      if (pointerInside) { cancel(); if (!open) setOpenRef.current(true) }
+      else schedule()
+    }
+    const focus = (event: FocusEvent) => {
+      if (sidebar()?.contains(event.target as Node)) { cancel(); if (!open) setOpenRef.current(true) }
+      else schedule()
+    }
+    const leave = () => { pointerInside = false; schedule() }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('focusin', focus)
+    document.addEventListener('pointerleave', leave)
+    return () => { cancel(); document.removeEventListener('pointermove', move); document.removeEventListener('focusin', focus); document.removeEventListener('pointerleave', leave) }
+  }, [autoHideActive, open])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -123,8 +186,10 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      autoHide,
+      setAutoHide,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, autoHide]
   )
 
   return (
@@ -132,6 +197,7 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
+          data-auto-hide={autoHideActive ? "true" : undefined}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH,
@@ -145,6 +211,7 @@ function SidebarProvider({
           )}
           {...props}
         >
+          {autoHideActive && !open && <span className="sidebar-edge-hint" aria-hidden="true" />}
           {children}
         </div>
       </TooltipProvider>
@@ -229,6 +296,7 @@ function Sidebar({
       />
       <div
         data-slot="sidebar-container"
+        inert={state === "collapsed" ? true : undefined}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
           side === "left"
@@ -252,6 +320,18 @@ function Sidebar({
       </div>
     </div>
   )
+}
+
+function SidebarAutoHideToggle() {
+  const { autoHide, setAutoHide, isMobile } = useSidebar()
+  const { locale } = useLanguage()
+  if (isMobile) return null
+  return <button type="button" className="sidebar-auto-hide-toggle" aria-pressed={autoHide}
+    title={locale === 'nl' ? 'Verschijn bij de linkerrand en verberg na het verlaten van de zijbalk.' : 'Reveal near the left edge and hide after leaving the sidebar.'}
+    onClick={() => setAutoHide(!autoHide)}>
+    <PinOffIcon size={15} /><LocalizedText text="Auto-hide sidebar" />
+    <span className="sidebar-auto-hide-status"><LocalizedText text={autoHide ? 'On' : 'Off'} /></span>
+  </button>
 }
 
 function SidebarTrigger({
@@ -717,6 +797,7 @@ export {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  SidebarAutoHideToggle,
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,

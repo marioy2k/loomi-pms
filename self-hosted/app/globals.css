@@ -296,3 +296,13 @@ input[type=file]::file-selector-button{margin-right:12px;padding:4px 10px;border
 @media(max-width:760px){.overview-stat:not(:last-child) .stat-value{font-size:28px}}
 @media(min-width:761px) and (max-width:1100px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-value{font-size:28px}.page-heading{flex-wrap:wrap}.page-heading>div{flex:1 1 240px}}
 @media(min-width:761px){.content [data-slot=tabs-list]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));width:100%;align-items:stretch;gap:4px;padding:4px}.content [data-slot=tabs-trigger]{min-width:0;white-space:normal}}
+
+/* Desktop auto-hide overlays the workspace so hovering does not shift content. */
+[data-auto-hide=true] [data-slot=sidebar-gap]{width:0!important}
+[data-auto-hide=true] [data-slot=sidebar-container]{z-index:45;box-shadow:8px 0 24px #12352d26}
+.sidebar-auto-hide-toggle{display:flex;align-items:center;gap:8px;margin:0 16px 12px;padding:9px 10px;min-height:40px;border:1px solid var(--sidebar-border);border-radius:7px;color:var(--sidebar-foreground);font-size:12px;text-align:left}
+.sidebar-auto-hide-toggle:hover,.sidebar-auto-hide-toggle[aria-pressed=true]{background:var(--sidebar-accent)}
+.sidebar-auto-hide-toggle:focus-visible{outline:2px solid #d7edb9;outline-offset:2px}
+.sidebar-auto-hide-toggle svg{flex-shrink:0}.sidebar-auto-hide-status{margin-left:auto;font-weight:600}
+.sidebar-edge-hint{position:fixed;left:0;top:25%;height:50%;width:4px;border-radius:0 4px 4px 0;background:var(--brand);opacity:.4;z-index:44;pointer-events:none}
+@media(prefers-reduced-motion:reduce){[data-auto-hide=true] [data-slot=sidebar-container]{transition:none}}

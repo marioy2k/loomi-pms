@@ -1,4 +1,7 @@
 export const dutch={
+ "Auto-hide sidebar":"Zijbalk automatisch verbergen",
+ "On":"Aan",
+ "Off":"Uit",
  "Reservations for your selected day":"Reserveringen voor de gekozen datum",
  "For your selected day":"Voor de gekozen datum",
  "Green: online · Red: offline. Updates every 15 seconds. Closed or disconnected browsers go offline within 3 minutes.":"Groen: online · Rood: offline. Wordt elke 15 seconden vernieuwd. Gesloten of niet-verbonden browsers worden binnen 3 minuten offline weergegeven.",
