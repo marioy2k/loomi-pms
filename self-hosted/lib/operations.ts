@@ -1,6 +1,6 @@
 import {validCurrency} from '@/lib/currency';
 import type {State,Booking} from '@/lib/pms';
-import {nights} from '@/lib/pms';
+import {bookingTotalCents,nights} from '@/lib/pms';
 import {moduleEnabled,type Module} from '@/lib/modules';
 import {can,hasPermission,isSuperAdmin,type Access,type Permission} from '@/lib/permissions';
 import {validDate,cents} from '@/lib/accounting-reports';
@@ -13,7 +13,7 @@ export const canOperate=(user:Access,kind:OperationKind)=>moduleEnabled(user,ope
 export function localDay(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Paramaribo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 export const overlaps=(a:string,b:string,c:string,d:string)=>a<d&&b>c;
 export function checkMaintenance(state:State,old:State,blocks:Operation[]){for(const b of state.bookings){const before=old.bookings.find(x=>x.id===b.id);if(['Cancelled','Checked out'].includes(b.status)||before&&before.room===b.room&&before.arrival===b.arrival&&before.departure===b.departure&&before.status===b.status)continue;if(state.rooms.find(r=>r.id===b.room)?.housekeeping==='Out of service')throw Error('This accommodation is out of service');if(blocks.some(m=>m.data.block&&m.data.room===b.room&&m.data.status!=='Resolved'&&overlaps(b.arrival,b.departure,m.data.from,m.data.to)))throw Error('This accommodation is blocked for maintenance during these dates');}}
-export function policyAmounts(b:Booking,policy:Record<string,any>){const total=cents(b.rate)*nights(b);return {total,depositDue:Math.round(total*(policy.depositPercent||0)/100),cancellationFee:Math.round(total*(policy.cancellationPercent||0)/100)};}
+export function policyAmounts(b:Booking,policy:Record<string,any>){const total=bookingTotalCents(b);return {total,depositDue:Math.round(total*(policy.depositPercent||0)/100),cancellationFee:Math.round(total*(policy.cancellationPercent||0)/100)};}
 function text(x:any,key:string,max=500,required=false){if(typeof x[key]!=='string'||x[key].length>max||required&&!x[key].trim())throw Error('Check '+key);}
 export function validateOperation(kind:OperationKind,x:any,state:State){if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Invalid operation');if(['maintenance','purchase','shift'].includes(kind)&&x.currency!==undefined&&!validCurrency(x.currency))throw Error('Choose US$, SRD or euro');
  if(kind==='maintenance'){text(x,'title',120,true);text(x,'room',100,true);text(x,'assigned',200);text(x,'notes',2000);if(!state.rooms.some(r=>r.id===x.room)||!['Open','In progress','Resolved'].includes(x.status)||typeof x.block!=='boolean'||!Number.isFinite(x.cost)||x.cost<0||x.cost>1e8)throw Error('Check maintenance room, status and cost');if(x.block&&(!validDate(x.from)||!validDate(x.to)||x.from>=x.to))throw Error('Select a valid maintenance date range');if(x.block&&x.status!=='Resolved'&&state.bookings.some(b=>b.room===x.room&&!['Cancelled','Checked out'].includes(b.status)&&overlaps(b.arrival,b.departure,x.from,x.to)))throw Error('A reservation already occupies this maintenance date range');}
