@@ -1,5 +1,6 @@
 "use client"
 
+import {bindSidebarAutoHide} from '@/runtime/sidebar-auto-hide.mjs'
 import {LocalizedText,useLanguage} from '@/app/language'
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -117,41 +118,21 @@ function SidebarProvider({
     previousAutoHide.current = autoHideActive
   }, [autoHideActive])
 
+  const wrapperRef = React.useRef<HTMLDivElement>(null)
+  const openRef = React.useRef(open)
+  openRef.current = open
+  const autoHideController = React.useRef<ReturnType<typeof bindSidebarAutoHide> | null>(null)
   React.useEffect(() => {
     if (!autoHideActive) return
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let pointerInside = false
-    const sidebar = () => document.querySelector<HTMLElement>('[data-slot="sidebar-container"]')
-    const cancel = () => { if (timer) clearTimeout(timer); timer = undefined }
-    const schedule = () => {
-      if (!open || timer) return
-      timer = setTimeout(function closeWhenIdle() {
-        timer = undefined
-        const panel = sidebar(), focused = document.activeElement
-        const editing = panel?.contains(focused) && (focused?.matches('input,select,textarea,:focus-visible'))
-        const popup = document.querySelector('[data-slot="select-content"],[data-slot="dropdown-menu-content"],[data-slot="popover-content"],[role="dialog"]')
-        if (pointerInside) return
-        if (editing || popup) { timer = setTimeout(closeWhenIdle, 400); return }
-        setOpenRef.current(false)
-      }, 400)
-    }
-    const move = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return
-      const rect = sidebar()?.getBoundingClientRect()
-      pointerInside = event.clientX <= 16 || !!(open && rect && event.clientX >= rect.left && event.clientX <= rect.right + 8 && event.clientY >= rect.top && event.clientY <= rect.bottom)
-      if (pointerInside) { cancel(); if (!open) setOpenRef.current(true) }
-      else schedule()
-    }
-    const focus = (event: FocusEvent) => {
-      if (sidebar()?.contains(event.target as Node)) { cancel(); if (!open) setOpenRef.current(true) }
-      else schedule()
-    }
-    const leave = () => { pointerInside = false; schedule() }
-    document.addEventListener('pointermove', move)
-    document.addEventListener('focusin', focus)
-    document.addEventListener('pointerleave', leave)
-    return () => { cancel(); document.removeEventListener('pointermove', move); document.removeEventListener('focusin', focus); document.removeEventListener('pointerleave', leave) }
-  }, [autoHideActive, open])
+    const controller = bindSidebarAutoHide({
+      panel: () => wrapperRef.current?.querySelector<HTMLElement>('[data-slot="sidebar-container"]') ?? null,
+      isOpen: () => openRef.current,
+      onChange: (value: boolean) => setOpenRef.current(value),
+    })
+    autoHideController.current = controller
+    return () => { controller.dispose(); autoHideController.current = null }
+  }, [autoHideActive])
+  React.useEffect(() => { autoHideController.current?.sync() }, [open])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -197,6 +178,7 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
+          ref={wrapperRef}
           data-slot="sidebar-wrapper"
           data-auto-hide={autoHideActive ? "true" : undefined}
           style={
