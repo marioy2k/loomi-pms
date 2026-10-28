@@ -1,4 +1,6 @@
 export const dutch={
+ "Switch to light mode": "Lichte modus inschakelen",
+ "Switch to dark mode": "Donkere modus inschakelen",
  "Loomi Intelligence": "Loomi Intelligence",
  "Hotel assistant, drafts, room and cleaning plans, invoice recognition, forecasts and operational insights.": "Hotelassistent, concepten, kamer- en schoonmaakplanning, factuurherkenning, prognoses en operationele inzichten.",
  "Room capacity (optional)": "Kamercapaciteit (optioneel)",
