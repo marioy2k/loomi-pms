@@ -1,3 +1,4 @@
+import {localDayOffset} from '@/runtime/local-day.mjs';
 import {validDate,cents,categoriesFor,recordKinds,AccountingRecord} from '@/lib/accounting-reports';
 const currencies=['USD','SRD','EUR'];
 class AccountingError extends Error{status:number;constructor(status:number,message:string){super(message);this.status=status;}}
@@ -8,11 +9,11 @@ const auditSQL="INSERT OR IGNORE INTO accounting_audit(id,property_id,event,acto
 export function accountingError(e:unknown){return Response.json({error:e instanceof AccountingError?e.message:'Unable to save accounting records'},{status:e instanceof AccountingError?e.status:503});}
 export async function saveAccounting(db:any,propertyId:number,x:any,actor:string){
  const property=await db.prepare('SELECT data FROM property WHERE id=?').bind(propertyId).first();if(!property)fail(404,'Property not found');
- const now=new Date().toISOString();
+ const now=new Date().toISOString(),today=localDayOffset(0,new Date(now));
  if(x.action==='create-record'){
   if(!uuid(x.id)||!validDate(x.date)||!recordKinds.includes(x.kind)||!categoriesFor(x.kind).includes(x.category)||!money(x.amount)||!currencies.includes(x.currency)||typeof x.description!=='string'||!x.description.trim()||x.description.length>2000||typeof x.party!=='string'||x.party.length>200)fail(400,'Enter a valid date, category, amount and description');
   const booking=String(x.booking||'');if(booking&&!JSON.parse(property.data).bookings.some((b:any)=>b.id===booking))fail(400,'Reservation must belong to this property');
-  const paid=Number(x.paidAmount||0);if(!Number.isFinite(paid)||paid<0||paid>x.amount||paid>0&&(!validDate(x.paymentDate)||x.paymentDate>now.slice(0,10)||!['Cash','Card','Bank transfer'].includes(x.method)))fail(400,'Check the initial payment date, method and amount');
+  const paid=Number(x.paidAmount||0);if(!Number.isFinite(paid)||paid<0||paid>x.amount||paid>0&&cents(paid)===0||paid>0&&(!validDate(x.paymentDate)||x.paymentDate>today||!['Cash','Card','Bank transfer'].includes(x.method)))fail(400,'Check the initial payment date, method and amount');
   const normalized={id:x.id,property_id:propertyId,date:x.date,kind:x.kind,category:x.category,amount:cents(x.amount),currency:x.currency,description:x.description.trim(),party:x.party.trim(),booking};
   const existing=await db.prepare('SELECT * FROM accounting_records WHERE id=?').bind(x.id).first();
   if(existing){if(Object.entries(normalized).some(([k,v])=>existing[k]!==v))fail(409,'This record ID already belongs to another entry');const initial=await db.prepare('SELECT * FROM transactions WHERE id=?').bind('initial-'+x.id).first();if((initial?Math.abs(initial.amount):0)!==cents(paid)||initial&&(initial.date!==x.paymentDate||initial.method!==x.method))fail(409,'Initial payment differs from the saved request');return {saved:true,id:x.id};}
@@ -21,7 +22,7 @@ export async function saveAccounting(db:any,propertyId:number,x:any,actor:string
   await db.batch(statements);const stored=await db.prepare('SELECT * FROM accounting_records WHERE id=?').bind(x.id).first();if(Object.entries(normalized).some(([k,v])=>stored[k]!==v))fail(409,'This record ID already belongs to another entry');const initial=await db.prepare('SELECT * FROM transactions WHERE id=?').bind('initial-'+x.id).first();if((initial?Math.abs(initial.amount):0)!==cents(paid)||initial&&(initial.date!==x.paymentDate||initial.method!==x.method))fail(409,'Initial payment differs from the saved request');return {saved:true,id:x.id};
  }
  if(x.action==='settle-record'){
-  if(!uuid(x.id)||!validDate(x.date)||x.date>now.slice(0,10)||!money(x.amount)||!['Cash','Card','Bank transfer'].includes(x.method))fail(400,'Enter a valid payment date, amount and method');
+  if(!uuid(x.id)||!validDate(x.date)||x.date>today||!money(x.amount)||!['Cash','Card','Bank transfer'].includes(x.method))fail(400,'Enter a valid payment date, amount and method');
   const r=await db.prepare('SELECT * FROM accounting_records WHERE id=? AND property_id=?').bind(String(x.recordId),propertyId).first() as AccountingRecord|null;if(!r)fail(404,'Accounting record not found');
   if(r!.id.startsWith('pos-')||r!.id.startsWith('pass-'))fail(400,'Manage POS or swimming voucher payments in their own screens');
   const refund=r!.kind==='Security deposit'&&x.direction==='refund';if(r!.kind==='Security deposit'&&!['receive','refund'].includes(x.direction))fail(400,'Choose receive or refund');
@@ -29,8 +30,10 @@ export async function saveAccounting(db:any,propertyId:number,x:any,actor:string
   const kind=r!.kind==='Security deposit'?(refund?'Deposit refund':'Deposit received'):r!.kind==='Income credit'?'Income refund':r!.kind==='Expense credit'?'Expense refund':r!.kind;
   const existing=await db.prepare('SELECT * FROM transactions WHERE id=?').bind(x.id).first();if(existing){if(existing.property_id!==propertyId||existing.record_id!==r!.id||existing.amount!==amount||existing.date!==x.date||existing.method!==x.method)fail(409,'Payment ID already used for a different payment');return {saved:true};}
   const balance=r!.kind==='Security deposit'?"(SELECT COALESCE(SUM(amount),0) FROM transactions WHERE record_id=? AND property_id=?) + ? BETWEEN 0 AND accounting_records.amount":"(SELECT COALESCE(SUM(ABS(amount)),0) FROM transactions WHERE record_id=? AND property_id=?) + ? <= accounting_records.amount";
-  const datedBalance=r!.kind==='Security deposit'?" AND (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE record_id=? AND property_id=? AND date<=?) + ? >= 0":'';
-  const insert=db.prepare(`INSERT OR IGNORE INTO transactions(id,property_id,date,created,kind,method,amount,currency,booking,guest,description,actor,record_id,category) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM accounting_records WHERE id=? AND property_id=? AND ${balance}${datedBalance}`).bind(x.id,propertyId,x.date,now,kind,x.method,amount,r!.currency,r!.booking,r!.party,r!.description,actor,r!.id,r!.category,r!.id,propertyId,r!.id,propertyId,r!.kind==='Security deposit'?amount:Math.abs(amount),...(r!.kind==='Security deposit'?[r!.id,propertyId,x.date,amount]:[]));
+  // Validate every affected end-of-day balance, not just the final held amount.
+  const datedBalance=r!.kind==='Security deposit'?` AND (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE record_id=? AND property_id=? AND date<=?) + ? BETWEEN 0 AND accounting_records.amount
+  AND NOT EXISTS (SELECT 1 FROM transactions future WHERE future.record_id=accounting_records.id AND future.property_id=accounting_records.property_id AND future.date>? AND ((SELECT COALESCE(SUM(prior.amount),0) FROM transactions prior WHERE prior.record_id=accounting_records.id AND prior.property_id=accounting_records.property_id AND prior.date<=future.date) + ?) NOT BETWEEN 0 AND accounting_records.amount)` : '';
+  const insert=db.prepare(`INSERT OR IGNORE INTO transactions(id,property_id,date,created,kind,method,amount,currency,booking,guest,description,actor,record_id,category) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM accounting_records WHERE id=? AND property_id=? AND ${balance}${datedBalance}`).bind(x.id,propertyId,x.date,now,kind,x.method,amount,r!.currency,r!.booking,r!.party,r!.description,actor,r!.id,r!.category,r!.id,propertyId,r!.id,propertyId,r!.kind==='Security deposit'?amount:Math.abs(amount),...(r!.kind==='Security deposit'?[r!.id,propertyId,x.date,amount,x.date,amount]:[]));
   const result=await db.batch([insert,db.prepare(auditSQL).bind('payment-'+x.id,propertyId,'record-payment',actor,now,r!.id)]);if(!result[0].meta.changes)fail(409,'Payment exceeds the unpaid amount, or deposit refund exceeds money held');return {saved:true};
  }
  if(x.action==='categorize'){
