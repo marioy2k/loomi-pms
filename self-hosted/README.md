@@ -72,3 +72,9 @@ Reservation discounts: choose Percentage or Fixed amount when creating or editin
 ## Light and dark mode
 
 Use the sun/moon button at the bottom right of any page, including sign-in and the guest booking page. The first visit follows the device preference; choosing a mode saves it in this browser and synchronizes it across open Loomi tabs. The button sits next to the chat launcher. Documents continue to print on a light background.
+
+## Accounting business dates
+
+Reservation receipts, refunds and opening balances use `America/Paramaribo` business dates; UTC creation timestamps are retained for audit. Manual cash payments cannot be future-dated. Security-deposit mutations must keep every affected daily held balance between zero and the required deposit. Cancelled reservations with fees or payments remain visible in guest balances.
+
+For older automatic reservation receipts affected by UTC dating, `node tools/repair-reservation-dates.mjs` performs a read-only dry-run. After reviewing the IDs and taking a database backup, apply only selected rows with `--apply --id TRANSACTION_ID` (repeat `--id` as needed). The tool changes only eligible business dates, retains amounts and timestamps, records both accounting and activity audit events, and safely recognizes retries. Manual accounting entries are excluded.
