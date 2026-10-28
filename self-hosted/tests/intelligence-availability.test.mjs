@@ -11,6 +11,7 @@ test('common Dutch and English questions recognize room availability and relativ
  for(const q of ['hoeveel kamers zijn vandaag vrij','Welke kamers zijn beschikbaar vandaag?','How many rooms are available today?','Any vacant rooms today?'])assert.deepEqual(localQuestionPlan(q,today),{intent:'availability',from:today,to:today,search:''});
  assert.equal(localQuestionPlan('Welke kamers zijn overmorgen vrij?',today).from,'2026-10-30');
  assert.equal(localQuestionPlan('Available rooms tomorrow?',today).from,'2026-10-29');
+ assert.equal(localQuestionPlan('Welke saldi staan open?',today).intent,'balances');
 });
 test('availability excludes stays, maintenance and out-of-service rooms; checkout today releases the room',()=>{
  const answer=answerQuestion(context,owner,localQuestionPlan('hoeveel kamers zijn vandaag vrij',today));assert.equal(answer.count,4);assert.deepEqual(answer.rooms.map(r=>r.room),['102','103','104','107']);assert.equal(answer.rooms.find(r=>r.room==='104').ready,false);assert(answer.references.every(r=>r.kind==='room'));assert(!JSON.stringify(answer).includes('Private Guest'));assert(!JSON.stringify(answer).includes('nightlyRate'));

@@ -15,7 +15,7 @@
 
 .mobileExtras{display:none}
 @media(max-width:767px){
- .openRoot{position:fixed;left:0;right:0;top:var(--chat-viewport-top,0px);bottom:auto;height:var(--chat-viewport-height,100dvh);width:100%;z-index:90;background:var(--mode-surface,white);overflow:hidden;overscroll-behavior:none}
+ .openRoot{position:fixed;left:0;right:0;top:var(--chat-viewport-top,0px);bottom:auto;height:var(--chat-viewport-height,100dvh);width:100%;z-index:49;background:var(--mode-surface,white);overflow:hidden;overscroll-behavior:none}
  .openRoot .panel{position:absolute;inset:0;width:100%;max-width:100%;height:100%;max-height:100%;margin:0;border:0;border-radius:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
  .openRoot .launcher,.openRoot .composer>small,.openRoot .composeTools{display:none}
  .openRoot .header{padding:9px 10px;min-height:52px}.openRoot .header h2{font-size:16px}.openRoot .header .icon{width:30px;height:34px}
@@ -24,3 +24,5 @@
  .openRoot input,.openRoot select,.openRoot textarea{font-size:16px}.openRoot .pendingFiles{max-height:72px}.openRoot .threadTools{padding:5px 10px}.openRoot .sharePanel{max-height:min(180px,45dvh)}
  .mobileExtras{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.mobileExtras button{display:flex;align-items:center;gap:5px;border:1px solid var(--mode-outline,#cbd9d3);background:var(--mode-surface,white);color:inherit;border-radius:6px;padding:8px;font-size:12px}
 }
+
+@media(max-width:767px){:global(body):has(.openRoot) :global(.color-mode-toggle){display:none}}
