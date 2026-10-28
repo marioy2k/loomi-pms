@@ -14,6 +14,7 @@ export default function IntelligenceChat(props:IntelligenceProps){
  const alive=useRef(true),inFlight=useRef(false),end=useRef<HTMLDivElement>(null),input=useRef<HTMLTextAreaElement>(null);
  useEffect(()=>{alive.current=true;fetch('/api/intelligence?propertyId='+props.propertyId).then(readApiResponse<any>).then(data=>{if(alive.current){setOverview(data);setError('')}}).catch(e=>{if(alive.current)setError(e.message)});return()=>{alive.current=false}},[props.propertyId,tools]);
  useEffect(()=>{end.current?.scrollIntoView({block:'nearest'})},[turns,busy]);
+ useEffect(()=>{if(!busy&&turns.length&&!tools)input.current?.focus()},[busy]);
  async function send(event:React.FormEvent){
   event.preventDefault();const text=question.trim();if(text.length<3||inFlight.current||!overview?.tools.includes('ask'))return;
   inFlight.current=true;setBusy(true);setError('');setQuestion('');setTurns(old=>[...old,{question:text}]);
