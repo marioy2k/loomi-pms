@@ -1,4 +1,7 @@
 export const dutch={
+ "Loomi Intelligence": "Loomi Intelligence",
+ "Hotel assistant, drafts, room and cleaning plans, invoice recognition, forecasts and operational insights.": "Hotelassistent, concepten, kamer- en schoonmaakplanning, factuurherkenning, prognoses en operationele inzichten.",
+ "Room capacity (optional)": "Kamercapaciteit (optioneel)",
  "Sidebar":"Zijbalk",
  "Automatically hide the sidebar and reveal it when you move near the left edge.":"Verberg de zijbalk automatisch en toon hem wanneer je de muis naar de linkerrand beweegt.",
  "This preference is saved in this browser and takes effect immediately.":"Deze voorkeur wordt in deze browser bewaard en gaat direct in.",
