@@ -1,6 +1,8 @@
 # Loomi Intelligence
 
-Open **Loomi Intelligence** from the sidebar. The existing **Integrations & AI** company entitlement now supplies this workspace. Each tool also requires its underlying module and employee permission. Property assignments apply to all reads and writes.
+Open **Chat** at the bottom right, then select **Loomi Intelligence**. Ask questions in the conversation; **More tools / Meer functies** opens the existing analysis and draft tools within the chat window. Conversation history remains in memory when switching to team chat or closing the window and clears when changing property or reloading. Each question is interpreted independently; include dates or references again in follow-up questions.
+
+For room packages, select the optional **Loomi Intelligence** add-on in **Settings → Licence & optional extras**: **USD 50 per month per property**, or USD 600 for a year (12 months). It is excluded from base packages and Operations and included in the free demo. Existing legacy licences keep their explicitly granted modules. The licence form controls entitlements and pricing; it does not collect payments. Team chat remains a separate free add-on; Intelligence works even when team chat is disabled. Each tool also requires its underlying module and employee permission. Property assignments apply to all reads and writes.
 
 ## Included tools
 
