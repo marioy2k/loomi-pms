@@ -84,3 +84,11 @@ For older automatic reservation receipts affected by UTC dating, `node tools/rep
 In an open team conversation, use the trash button to delete the conversation for yourself, then confirm. Existing messages, files, pinned notes, search results and notifications disappear from your view; colleagues retain their copies. New messages bring the conversation back. Search the colleague or group name to start again yourself. The cutoff synchronizes across sessions and is included in backups.
 
 Group creators and company administrators who are current members can open **Manage group → Delete group for everyone**. After explicit confirmation, this permanently deletes the group and its messages, attachments, receipts, pins and record links. Group membership/version is checked again on the server; ordinary members can only clear their own view. Deletion is audited.
+
+## Mobile chat and remembered notification devices
+
+On screens up to 767 px, Chat opens as a full-screen view. The contact list or message history scrolls inside the chat; the header and composer remain visible. The view follows the browser's visual viewport when the software keyboard opens or pans the screen. Closing chat restores page scrolling. The attachment button opens the mobile attachment/link/handover options.
+
+For Android browser alerts, open Loomi through HTTPS, sign in and use **Chat → Team chat → Chat settings → Enable browser notifications**. Allow notifications in Chrome and Android's lock-screen settings. No native Loomi app is required.
+
+The optional **Keep notifications on this device after logout** switch registers this browser independently of the login session. It is off by default. After logout or session expiry, remembered browsers receive only a generic “New Loomi message. Sign in to read it.” notification; opening Loomi still requires login. Disable browser notifications on that browser to revoke it. Disabling a staff account stops new deliveries, and group membership, deleted-message cutoffs and quiet hours still apply. Ordinary notification subscriptions remain session-bound. Remembered-device registrations are authentication-related state, retained in full server backups rather than hotel JSON exports.
