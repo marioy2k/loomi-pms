@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import {Store} from '../runtime/core.mjs';
+import {deleteChat,chatSnapshot,sendChat,searchChat,saveChatGroup,pinChat,uploadChatAttachment,chatAttachment} from '../runtime/chat.mjs';
+import {pushNotice} from '../runtime/chat-push.mjs';
+import helper from './helpers/load-ts.cjs';
+const {backupTables,inspectBackup,digest}=helper.loadTs('lib/backup.ts');
+function fixture(){const dir=mkdtempSync(join(tmpdir(),'chat-deletion-')),s=new Store(join(dir,'qa.sqlite'),new URL('../drizzle',import.meta.url).pathname);s.bootstrap('owner@example.test','qa-password-2026','QA Owner');const t={owner:s.login('owner@example.test','qa-password-2026')};for(const name of ['alice','bob','carol']){s.db.prepare("INSERT INTO staff(email,name,role,permissions,active,property_ids,team) VALUES(?,?,'employee','[]',1,'[1]','custom')").run(name+'@example.test',name);s.setPassword(name+'@example.test','qa-password-2026',name);t[name]=s.login(name+'@example.test','qa-password-2026')}return {s,t,close(){s.db.close();rmSync(dir,{recursive:true,force:true})}}}
+const message=(to,body='Saved handover')=>({to,body,clientId:randomUUID()});
+test('personal deletion persists and removes history, pins, files, search and notifications only for its caller',()=>{const f=fixture();try{const {s,t}=f;const file=uploadChatAttachment(s,t.alice,{id:randomUUID(),to:'bob@example.test',name:'note.txt',bytes:Buffer.from('Handover file')});const m=sendChat(s,t.alice,{...message('bob@example.test'),attachments:[file.id]});pinChat(s,t.bob,m.id,true);
+ assert.throws(()=>deleteChat(s,t.bob,{scope:'me',peer:'alice@example.test',through:m.id}),e=>e.status===400);
+ deleteChat(s,t.bob,{scope:'me',peer:'alice@example.test',through:m.id,confirmed:true});
+ const own=chatSnapshot(s,t.bob,{peer:'alice@example.test',incomingAfter:0});assert.equal(own.messages.length,0);assert.equal(own.pins.length,0);assert.equal(own.notifications.length,0);assert.equal(own.unread,0);assert(own.contacts.find(c=>c.email==='alice@example.test').hidden);
+ assert.equal(searchChat(s,t.bob,{q:'handover'}).results.length,0);assert.equal(searchChat(s,t.bob,{q:'handover',peer:'alice@example.test'}).results.length,0);
+ assert.throws(()=>chatAttachment(s,t.bob,file.id),e=>e.status===404);assert.throws(()=>pinChat(s,t.bob,m.id,true),e=>e.status===404);assert.throws(()=>pushNotice(s,t.bob,m.id),e=>e.status===404);
+ assert.equal(chatSnapshot(s,t.alice,{peer:'bob@example.test'}).messages.length,1);assert.equal(chatAttachment(s,t.alice,file.id).name,'note.txt');assert.equal(s.db.prepare('SELECT read_at FROM chat_receipts WHERE message_id=?').get(m.id).read_at,null);
+ const next=sendChat(s,t.alice,message('bob@example.test','New handover'));const after=chatSnapshot(s,t.bob,{peer:'alice@example.test'});assert.deepEqual(after.messages.map(m=>m.id),[next.id]);assert.equal(after.unread,1);assert(!after.contacts.find(c=>c.email==='alice@example.test').hidden);
+ // A confirmation from an older view cannot erase the newly arrived message.
+ deleteChat(s,t.bob,{scope:'me',peer:'alice@example.test',through:m.id,confirmed:true});assert.deepEqual(chatSnapshot(s,t.bob,{peer:'alice@example.test',before:next.id+1}).messages.map(m=>m.id),[next.id]);
+ }finally{f.close()}});
+test('group members may clear their own chat; only a current manager may delete the entire group',()=>{const f=fixture();try{const {s,t}=f;const {id}=saveChatGroup(s,t.alice,{name:'Reception',members:['bob@example.test']});const file=uploadChatAttachment(s,t.alice,{id:randomUUID(),to:id,name:'group.txt',bytes:Buffer.from('Group document')});const m=sendChat(s,t.alice,{...message(id),attachments:[file.id]});pinChat(s,t.bob,m.id,true);
+ assert.throws(()=>deleteChat(s,t.carol,{scope:'group',peer:id,previous:1,confirmed:true}),e=>e.status===403);
+ assert.throws(()=>deleteChat(s,t.bob,{scope:'group',peer:id,previous:1,confirmed:true}),e=>e.status===403);
+ assert.throws(()=>deleteChat(s,t.alice,{scope:'group',peer:id,previous:0,confirmed:true}),e=>e.status===409);
+ deleteChat(s,t.bob,{scope:'me',peer:id,through:m.id,confirmed:true});assert.equal(chatSnapshot(s,t.bob,{peer:id}).messages.length,0);assert.equal(chatSnapshot(s,t.alice,{peer:id}).messages.length,1);
+ deleteChat(s,t.alice,{scope:'group',peer:id,previous:1,confirmed:true});assert(!chatSnapshot(s,t.bob).contacts.some(c=>c.email===id));assert.throws(()=>sendChat(s,t.bob,message(id)),e=>e.status===403);
+ for(const table of ['chat_messages','chat_attachments','chat_receipts','chat_pins','chat_references','chat_deleted_threads','chat_groups','chat_group_members'])assert.equal(s.db.prepare('SELECT count(*) n FROM '+table).get().n,0,table);
+ assert.equal(s.db.prepare("SELECT count(*) n FROM activity_log WHERE event='chat.group-deleted'").get().n,1);
+ }finally{f.close()}});
+test('deleted conversation cutoffs survive backup validation and older backups remain supported',async()=>{const f=fixture();try{const {s,t}=f;s.db.prepare('INSERT INTO property(id,data) VALUES(1,?)').run(JSON.stringify({hotel:'QA',currency:'USD',rooms:[],bookings:[]}));const m=sendChat(s,t.alice,message('bob@example.test'));deleteChat(s,t.bob,{scope:'me',peer:'alice@example.test',through:m.id,confirmed:true});const tables=Object.fromEntries(backupTables.map(table=>[table,s.db.prepare('SELECT * FROM '+table).all()]));const pack=async tables=>({format:'loomi-backup',version:1,tables,checksum:await digest(tables)});await inspectBackup(s,await pack(tables));const bad=structuredClone(tables);bad.chat_deleted_threads[0].through_id=-1;await assert.rejects(inspectBackup(s,await pack(bad)),/deleted conversation/);const old=structuredClone(tables);delete old.chat_deleted_threads;const legacy=await pack(old);await inspectBackup(s,legacy);assert.deepEqual(legacy.tables.chat_deleted_threads,[])}finally{f.close()}});

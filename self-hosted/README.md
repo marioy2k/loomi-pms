@@ -78,3 +78,9 @@ Use the sun/moon button at the bottom right of any page, including sign-in and t
 Reservation receipts, refunds and opening balances use `America/Paramaribo` business dates; UTC creation timestamps are retained for audit. Manual cash payments cannot be future-dated. Security-deposit mutations must keep every affected daily held balance between zero and the required deposit. Cancelled reservations with fees or payments remain visible in guest balances.
 
 For older automatic reservation receipts affected by UTC dating, `node tools/repair-reservation-dates.mjs` performs a read-only dry-run. After reviewing the IDs and taking a database backup, apply only selected rows with `--apply --id TRANSACTION_ID` (repeat `--id` as needed). The tool changes only eligible business dates, retains amounts and timestamps, records both accounting and activity audit events, and safely recognizes retries. Manual accounting entries are excluded.
+
+## Delete chats and groups
+
+In an open team conversation, use the trash button to delete the conversation for yourself, then confirm. Existing messages, files, pinned notes, search results and notifications disappear from your view; colleagues retain their copies. New messages bring the conversation back. Search the colleague or group name to start again yourself. The cutoff synchronizes across sessions and is included in backups.
+
+Group creators and company administrators who are current members can open **Manage group → Delete group for everyone**. After explicit confirmation, this permanently deletes the group and its messages, attachments, receipts, pins and record links. Group membership/version is checked again on the server; ordinary members can only clear their own view. Deletion is audited.

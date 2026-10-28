@@ -142,19 +142,24 @@ export function feedbackAnalysis(rows:any[]){
  const topics:Record<string,RegExp>={Schoonmaak:/clean|dirty|schoon|vuil|hygi/i,Personeel:/staff|service|personeel|vriend|friendly|recept/i,Slaapcomfort:/bed|sleep|slap|noise|lawaai|geluid/i,Klimaat:/airco|warm|cold|cool|heat/i,Ontbijt:/breakfast|ontbijt|food|eten/i,Wifi:/wifi|internet/i};
  return {count:rows.length,averageRating:rows.length?Math.round(sum(rows.map(r=>r.rating))/rows.length*10)/10:null,method:'Beoordelingsscores en trefwoordgroepen; één beoordeling kan meerdere onderwerpen bevatten.',topics:Object.entries(topics).map(([topic,re])=>{const matches=rows.filter(r=>re.test(r.text));return {topic,count:matches.length,negative:matches.filter(r=>r.rating<=2).length,positive:matches.filter(r=>r.rating>=4).length,references:matches.map(r=>ref('feedback',r.id))};}).filter(x=>x.count).sort((a,b)=>b.negative-a.negative||b.count-a.count)};
 }
-export type QuestionPlan={intent:'arrivals'|'departures'|'balances'|'discounts'|'occupancy'|'reservations';from:string;to:string;search:string};
+export type QuestionPlan={intent:'availability'|'arrivals'|'departures'|'balances'|'discounts'|'occupancy'|'reservations';from:string;to:string;search:string};
 export function localQuestionPlan(question:string,today:string):QuestionPlan|null{
  const q=question.toLowerCase();let intent:QuestionPlan['intent']|undefined;
- if(/korting|discount/.test(q))intent='discounts';else if(/saldo|balance|openstaand|unpaid|betaling|payment/.test(q))intent='balances';else if(/vertrek|uitcheck|check.*uit|check.?out|depart/.test(q))intent='departures';else if(/aankomst|incheck|check.?in|arriv/.test(q))intent='arrivals';else if(/bezet|occup/.test(q))intent='occupancy';else if(/reserver|booking|reservation/.test(q))intent='reservations';
+ if(/vrij|beschikbaar|available|vacan|free rooms?|rooms? free/.test(q)&&/kamer|room|verblijf|accommod/.test(q))intent='availability';else if(/korting|discount/.test(q))intent='discounts';else if(/saldo|balance|openstaand|unpaid|betaling|payment/.test(q))intent='balances';else if(/vertrek|uitcheck|check.*uit|check.?out|depart/.test(q))intent='departures';else if(/aankomst|incheck|check.?in|arriv/.test(q))intent='arrivals';else if(/bezet|occup/.test(q))intent='occupancy';else if(/reserver|booking|reservation/.test(q))intent='reservations';
  if(!intent)return null;
- const dates=q.match(/\d{4}-\d{2}-\d{2}/g)||[];let from=dates[0]||(/morgen|tomorrow/.test(q)?shiftDay(today,1):today),to=dates[1]||from;
+ const dates=q.match(/\d{4}-\d{2}-\d{2}/g)||[];let from=dates[0]||(/overmorgen|day after tomorrow/.test(q)?shiftDay(today,2):/morgen|tomorrow/.test(q)?shiftDay(today,1):today),to=dates[1]||from;
  if(/maand|month/.test(q)&&!dates.length){from=today.slice(0,7)+'-01';to=shiftDay(new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7)),1)).toISOString().slice(0,10),-1);}
  return {intent,from,to,search:''};
 }
 export function answerQuestion(c:IntelligenceContext,user:Access,plan:QuestionPlan){
- checkRange(plan.from,plan.to);if(!['arrivals','departures','balances','discounts','occupancy','reservations'].includes(plan.intent)||typeof plan.search!=='string'||plan.search.length>200)throw Error('Invalid question plan');
+ checkRange(plan.from,plan.to);if(!['availability','arrivals','departures','balances','discounts','occupancy','reservations'].includes(plan.intent)||typeof plan.search!=='string'||plan.search.length>200)throw Error('Invalid question plan');
  if(['balances','discounts'].includes(plan.intent)&&!financialAccess(user))throw Error('Payment or rate permission required for this question');
  if(!can(user,'reservations')&&!can(user,'guests')&&!can(user,'overview')&&!financialAccess(user))throw Error('Reservation or overview permission required');
+ if(plan.intent==='availability'){
+  const departure=shiftDay(plan.to,1);
+  const rooms=c.state.rooms.filter(room=>(!plan.search||[room.id,room.type].join(' ').toLowerCase().includes(plan.search.toLowerCase()))&&room.housekeeping!=='Out of service'&&!c.state.bookings.some(b=>active(b)&&b.status!=='Checked out'&&b.room===room.id&&b.arrival<departure&&b.departure>plan.from)&&!c.operations.some(o=>o.kind==='maintenance'&&o.data.room===room.id&&o.data.block&&o.data.status!=='Resolved'&&o.data.from<departure&&o.data.to>plan.from)).map(room=>({room:room.id,type:room.type,ready:room.housekeeping==='Clean'}));
+  return {plan,count:rooms.length,rooms,rows:[],references:rooms.map(room=>ref('room',room.room)),note:'Vrij gedurende de hele gekozen periode, inclusief de einddatum. Vertrek op de begindatum blokkeert niet. Kamers met onderhoud of buiten gebruik tellen niet mee; controleer de schoonmaakstatus voor aankomst.'};
+ }
  let bookings=c.state.bookings.filter(active).filter(b=>!plan.search||[b.id,b.room,...(can(user,'reservations')||can(user,'guests')?[b.guest]:[])].join(' ').toLowerCase().includes(plan.search.toLowerCase()));
  if(plan.intent==='arrivals')bookings=bookings.filter(b=>b.arrival>=plan.from&&b.arrival<=plan.to&&b.status!=='Checked out');
  else if(plan.intent==='departures')bookings=bookings.filter(b=>b.departure>=plan.from&&b.departure<=plan.to);
