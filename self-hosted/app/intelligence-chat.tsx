@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Send,LoaderCircle} from 'lucide-react';
+import {Send,LoaderCircle,Trash2,SlidersHorizontal} from 'lucide-react';
 import Intelligence,{type IntelligenceProps} from './intelligence';
 import {useLanguage} from './language';
 import {readApiResponse} from '@/lib/api-response';
@@ -25,7 +25,7 @@ export default function IntelligenceChat(props:IntelligenceProps){
  const providerReady=overview?.provider.configured&&overview?.provider.externalEnabled;
  const canOpen=can(props.access,'reservations')||can(props.access,'bookingPayments')||can(props.access,'bookingRates');
  return <div className={styles.root}>
-  <div className={styles.heading}><div><strong>Loomi Intelligence</strong><small>{overview?.property||t('Hotelassistent','Hotel assistant')} · $50/{t('maand','month')}</small></div><div className={styles.headerActions}>{turns.length>0&&<button type="button" disabled={busy} onClick={()=>setConfirmClear(true)}>{t('Gesprek wissen','Clear conversation')}</button>}<button type="button" aria-expanded={tools} onClick={()=>setTools(!tools)}>{tools?t('Terug naar gesprek','Back to conversation'):t('Meer functies','More tools')}</button></div></div>
+  <div className={styles.heading}><div><strong>Loomi Intelligence</strong><small>{overview?.property||t('Hotelassistent','Hotel assistant')} · $50/{t('maand','month')}</small></div><div className={styles.headerActions}>{turns.length>0&&<button type="button" disabled={busy} aria-label={t('Gesprek wissen','Clear conversation')} onClick={()=>setConfirmClear(true)}><Trash2 size={17} className={styles.mobileIcon}/><span className={styles.buttonLabel}>{t('Gesprek wissen','Clear conversation')}</span></button>}<button type="button" aria-label={tools?t('Terug naar gesprek','Back to conversation'):t('Meer functies','More tools')} aria-expanded={tools} onClick={()=>setTools(!tools)}><SlidersHorizontal size={17} className={styles.mobileIcon}/><span className={styles.buttonLabel}>{tools?t('Terug naar gesprek','Back to conversation'):t('Meer functies','More tools')}</span></button></div></div>
   {confirmClear&&<div className={styles.clearConfirm} role="alertdialog" aria-label={t('Gesprek wissen','Clear conversation')}><p>{t('Dit gesprek met Loomi wissen?','Clear this conversation with Loomi?')}</p><button type="button" onClick={()=>setConfirmClear(false)}>{t('Annuleren','Cancel')}</button><button type="button" disabled={busy} onClick={()=>{setTurns([]);setQuestion('');setConfirmClear(false)}}>{t('Wissen bevestigen','Confirm clear')}</button></div>}
   {tools&&<div className={styles.tools}><Intelligence {...props} embedded/></div>}
   <div hidden={tools} className={styles.conversation}>
@@ -42,9 +42,9 @@ export default function IntelligenceChat(props:IntelligenceProps){
    </div>
    {error&&<p className={styles.error} role="alert">{error}</p>}
    <form onSubmit={send} className={styles.composer}>
-    <label htmlFor="loomi-question">{t('Vraag Loomi','Ask Loomi')}</label><div><textarea ref={input} id="loomi-question" rows={2} maxLength={1500} value={question} disabled={busy||!overview?.tools.includes('ask')} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send(e)}}} placeholder={t('Stel je vraag…','Ask your question…')}/><button type="submit" disabled={busy||question.trim().length<3||!overview?.tools.includes('ask')} aria-label={t('Vraag versturen','Send question')}>{busy?<LoaderCircle size={19}/>:<Send size={19}/>}</button></div>
-    <small>{t('Enter: versturen · Shift+Enter: nieuwe regel','Enter: send · Shift+Enter: new line')}</small>
-    {providerReady?<label className={styles.ai}><input type="checkbox" checked={useAI} disabled={busy} onChange={e=>setUseAI(e.target.checked)}/>{t('AI gebruiken voor deze vraag','Use AI for this question')}</label>:<small>{t('Lokale antwoorden uit hotelgegevens. AI kan worden ingesteld bij Meer functies.','Local answers from hotel records. Configure AI under More tools.')}</small>}
+    <label htmlFor="loomi-question">{t('Vraag Loomi','Ask Loomi')}</label><div><textarea ref={input} id="loomi-question" rows={2} maxLength={1500} value={question} disabled={!overview?.tools.includes('ask')} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send(e)}}} placeholder={t('Stel je vraag…','Ask your question…')}/><button type="submit" onPointerDown={e=>{if(e.pointerType==='touch')e.preventDefault()}} disabled={busy||question.trim().length<3||!overview?.tools.includes('ask')} aria-label={t('Vraag versturen','Send question')}>{busy?<LoaderCircle size={19}/>:<Send size={19}/>}</button></div>
+    <small className={styles.compactHint}>{t('Enter: versturen · Shift+Enter: nieuwe regel','Enter: send · Shift+Enter: new line')}</small>
+    {providerReady?<label className={styles.ai}><input type="checkbox" checked={useAI} disabled={busy} onChange={e=>setUseAI(e.target.checked)}/>{t('AI gebruiken voor deze vraag','Use AI for this question')}</label>:<small className={styles.compactHint}>{t('Lokale antwoorden uit hotelgegevens. AI kan worden ingesteld bij Meer functies.','Local answers from hotel records. Configure AI under More tools.')}</small>}
     {useAI&&providerReady&&<small>{t('Deze vraag wordt voor interpretatie naar OpenAI gestuurd.','This question is sent to OpenAI for interpretation.')}</small>}
     {overview&&!overview.tools.includes('ask')&&<small>{t('Gebruik Meer functies voor de hulpmiddelen binnen jouw bevoegdheden.','Use More tools for the tools available to your role.')}</small>}
    </form>

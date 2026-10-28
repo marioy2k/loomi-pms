@@ -12,3 +12,15 @@
 .teamBody{display:flex;flex-direction:column;flex:1;min-height:0}.teamBody[hidden],.intelligenceBody[hidden]{display:none}.modeBar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;background:#174d45;color:white;flex-shrink:0}.modeBar>div{display:flex;gap:5px;flex-wrap:wrap}.modeBar>div>button{border:1px solid #ffffff55;border-radius:7px;background:transparent;color:white;padding:8px;font-size:12px}.modeBar>div>button[aria-pressed=true]{background:white;color:#174d45;font-weight:600}.intelligencePanel{width:520px}.intelligenceBody{min-height:0;flex:1;overflow:hidden}.modeBar button:focus-visible{outline:3px solid #8dbca4;outline-offset:2px}
 
 .deleteConfirm{padding:14px;border-bottom:1px solid var(--mode-outline,#d4e1dc);background:var(--mode-danger-surface,#fff0ec);color:var(--mode-danger-text,#963e2a);font-size:12px;flex-shrink:0;max-height:60%;overflow:auto}.deleteConfirm p{margin:8px 0;line-height:1.6}.deleteConfirm>div{display:flex;gap:8px}.deleteConfirm button,.deleteGroup{padding:8px 10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;font-size:12px}.deleteGroup{display:flex;align-items:center;gap:8px;color:var(--mode-danger-text,#963e2a);align-self:flex-start}.deleteConfirm button:disabled{opacity:.5}
+
+.mobileExtras{display:none}
+@media(max-width:767px){
+ .openRoot{position:fixed;left:0;right:0;top:var(--chat-viewport-top,0px);bottom:auto;height:var(--chat-viewport-height,100dvh);width:100%;z-index:90;background:var(--mode-surface,white);overflow:hidden;overscroll-behavior:none}
+ .openRoot .panel{position:absolute;inset:0;width:100%;max-width:100%;height:100%;max-height:100%;margin:0;border:0;border-radius:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+ .openRoot .launcher,.openRoot .composer>small,.openRoot .composeTools{display:none}
+ .openRoot .header{padding:9px 10px;min-height:52px}.openRoot .header h2{font-size:16px}.openRoot .header .icon{width:30px;height:34px}
+ .openRoot .modeBar{padding:5px 8px;min-height:40px}.openRoot .modeBar>div>button{padding:6px 9px}
+ .openRoot .messages{padding:12px 10px}.openRoot .composer{padding:8px;gap:6px}.openRoot .composer textarea{font-size:16px;min-height:40px;max-height:84px;resize:none}
+ .openRoot input,.openRoot select,.openRoot textarea{font-size:16px}.openRoot .pendingFiles{max-height:72px}.openRoot .threadTools{padding:5px 10px}.openRoot .sharePanel{max-height:min(180px,45dvh)}
+ .mobileExtras{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.mobileExtras button{display:flex;align-items:center;gap:5px;border:1px solid var(--mode-outline,#cbd9d3);background:var(--mode-surface,white);color:inherit;border-radius:6px;padding:8px;font-size:12px}
+}
