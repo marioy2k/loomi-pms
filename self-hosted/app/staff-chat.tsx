@@ -8,6 +8,7 @@ import {ChatText,safeChatUrl} from './chat-links';
 import {defaultQuiet,isChatQuiet} from '@/runtime/chat-quiet.mjs';
 import {useChatAlerts} from './use-chat-alerts';
 import {useChatViewport} from './use-chat-viewport';
+import {useCompactComposer} from './use-compact-composer';
 type Attachment={id:string;name:string;mime:string;size:number;url:string};
 export type ChatReference={kind:'room'|'booking';property_id:number;record_id:string;label:string};
 type Quiet={enabled:boolean;start:string;end:string;timezone:string};
@@ -27,6 +28,7 @@ export default function StaffChat({references=[],onOpenReference,intelligence,te
  const [pins,setPins]=useState<Message[]>([]),[messageQuery,setMessageQuery]=useState(''),[results,setResults]=useState<Message[]>([]),[searchMore,setSearchMore]=useState(false),[searching,setSearching]=useState(false),[searched,setSearched]=useState(false),[searchScope,setSearchScope]=useState(''),[groupName,setGroupName]=useState(''),[groupMembers,setGroupMembers]=useState<string[]>([]),[editingGroup,setEditingGroup]=useState<Contact|null>(null),[groupSaving,setGroupSaving]=useState(false),[quiet,setQuiet]=useState<Quiet>({...defaultQuiet}),[quietDraft,setQuietDraft]=useState<Quiet>({...defaultQuiet}),[quietSaving,setQuietSaving]=useState(false),[shareOpen,setShareOpen]=useState(false),[reference,setReference]=useState<ChatReference|null>(null),[website,setWebsite]=useState('');
  const quietDirty=useRef(false),referenceDrafts=useRef<Record<string,ChatReference|null>>({}),referenceRef=useRef(reference);referenceRef.current=reference;
  const settingsVisible=useRef(false),settingsButton=useRef<HTMLButtonElement>(null),settingsPanel=useRef<HTMLDivElement>(null),savedScroll=useRef(0),ui=useRef({open,peer}),messageRef=useRef(messages),cursor=useRef<number|undefined>(undefined),busy=useRef(false),blocked=useRef(false),alive=useRef(false),generation=useRef(0),drafts=useRef<Record<string,string>>({}),pending=useRef<{peer:string;body:string;id:string;files:string[];filesKey:string;referenceKey:string}|null>(null),attachmentDrafts=useRef<Record<string,Attachment[]>>({}),fileInput=useRef<HTMLInputElement>(null),privacyBusy=useRef(false),privacyRevision=useRef(0),readThrough=useRef<Record<string,number>>({}),box=useRef<HTMLOListElement>(null),input=useRef<HTMLTextAreaElement>(null),launcher=useRef<HTMLButtonElement>(null),pin=useRef(true),refreshRef=useRef<()=>Promise<void>>(async()=>{});
+ useCompactComposer(input,draft);
  ui.current={open:open&&mode==='team',peer};settingsVisible.current=screen!=='chat'||mode!=='team';messageRef.current=messages;
  const unread=contacts.reduce((n,c)=>n+c.unread,0),selected=contacts.find(c=>c.email===peer),senderName=(email:string)=>contacts.find(c=>c.email===email)?.name||email;
  const alerts=useChatAlerts(me,choose,()=>void refreshRef.current(),nl,quiet);

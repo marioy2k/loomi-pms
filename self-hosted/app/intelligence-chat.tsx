@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {Send,LoaderCircle,Trash2,SlidersHorizontal} from 'lucide-react';
 import Intelligence,{type IntelligenceProps} from './intelligence';
 import {useLanguage} from './language';
+import {useCompactComposer} from './use-compact-composer';
 import {readApiResponse} from '@/lib/api-response';
 import {can} from '@/lib/permissions';
 import styles from './intelligence-chat.module.css';
@@ -12,6 +13,7 @@ export default function IntelligenceChat(props:IntelligenceProps){
  const {locale}=useLanguage(),nl=locale==='nl',t=(a:string,b:string)=>nl?a:b;
  const [overview,setOverview]=useState<any>(null),[question,setQuestion]=useState(''),[turns,setTurns]=useState<Turn[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[useAI,setUseAI]=useState(false),[tools,setTools]=useState(false),[confirmClear,setConfirmClear]=useState(false);
  const alive=useRef(true),inFlight=useRef(false),end=useRef<HTMLDivElement>(null),input=useRef<HTMLTextAreaElement>(null);
+ useCompactComposer(input,question);
  useEffect(()=>{alive.current=true;fetch('/api/intelligence?propertyId='+props.propertyId).then(readApiResponse<any>).then(data=>{if(alive.current){setOverview(data);setError('')}}).catch(e=>{if(alive.current)setError(e.message)});return()=>{alive.current=false}},[props.propertyId,tools]);
  useEffect(()=>{end.current?.scrollIntoView({block:'nearest'})},[turns,busy]);
  useEffect(()=>{if(!busy&&turns.length&&!tools)input.current?.focus()},[busy]);

@@ -26,3 +26,5 @@
 }
 
 @media(max-width:767px){:global(body):has(.openRoot) :global(.color-mode-toggle){display:none}}
+
+@media(max-width:767px){.openRoot .composer{padding:6px 8px;align-items:end}.openRoot .composer textarea{height:40px;min-height:40px;max-height:104px;padding:8px 12px;border-radius:22px;line-height:22px}.openRoot .attach{height:40px}.openRoot .send{width:40px;height:40px}}
