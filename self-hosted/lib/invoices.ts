@@ -2,7 +2,7 @@ import {formatEuroRate} from '@/runtime/exchange-rates.mjs';
 import {type WifiVoucher,wifiReceiptHTML} from '@/lib/wifi-receipt';
 import {translateText} from '@/runtime/translations.mjs';
 import {validLogo} from '@/lib/logo';
-import {State,Booking,isHouse,nights,bookingCurrency} from '@/lib/pms';
+import {State,Booking,isHouse,nights,bookingCurrency,bookingSubtotalCents,bookingDiscountCents,bookingTotalCents} from '@/lib/pms';
 import {companyHeader,companyDetails,Company,defaultColor} from '@/lib/company';
 import {posDay,Order} from '@/lib/pos';
 export type InvoiceLine={description:string;quantity:number;unit:number;amount:number};
@@ -11,9 +11,9 @@ export function reservationInvoice(state:State,booking:Booking,orders:Order[],pr
  const stayCurrency=bookingCurrency(booking,state),allCharges=orders.filter(o=>o.booking===booking.id&&o.status==='posted');
  const availableCurrencies=[...new Set([stayCurrency,...allCharges.map(o=>o.currency||state.currency)])];
  if(!availableCurrencies.includes(currency))throw Error('Choose a currency available on this reservation invoice');
- const includeStay=currency===stayCurrency,stay=includeStay?(booking.status==='Cancelled'?Math.round((booking.cancellationFee||0)*100):Math.round(booking.rate*100)*nights(booking)):0;
+ const includeStay=currency===stayCurrency,stay=includeStay?(booking.status==='Cancelled'?Math.round((booking.cancellationFee||0)*100):bookingTotalCents(booking)):0;
  const charges=allCharges.filter(o=>(o.currency||state.currency)===currency);
- const lines:InvoiceLine[]=[...(includeStay?[{description:booking.status==='Cancelled'?'Cancellation fee':(isHouse(state)?'Whole-house accommodation':'Room '+booking.room)+' · '+booking.arrival+' to '+booking.departure,quantity:booking.status==='Cancelled'?1:nights(booking),unit:booking.status==='Cancelled'?stay:Math.round(booking.rate*100),amount:stay}]:[]),...charges.flatMap(o=>o.items.map(i=>({description:i.name+' · POS '+o.id.slice(0,8).toUpperCase(),quantity:i.quantity,unit:i.price,amount:i.quantity*i.price})))];
+ const lines:InvoiceLine[]=[...(includeStay?[{description:booking.status==='Cancelled'?'Cancellation fee':(isHouse(state)?'Whole-house accommodation':'Room '+booking.room)+' · '+booking.arrival+' to '+booking.departure,quantity:booking.status==='Cancelled'?1:nights(booking),unit:booking.status==='Cancelled'?stay:Math.round(booking.rate*100),amount:booking.status==='Cancelled'?stay:bookingSubtotalCents(booking)},...(booking.status!=='Cancelled'&&bookingDiscountCents(booking)>0?[{description:'Discount'+(booking.discount?.type==='percentage'?' ('+booking.discount.value+'%)':''),quantity:1,unit:-bookingDiscountCents(booking),amount:-bookingDiscountCents(booking)}]:[])]:[]),...charges.flatMap(o=>o.items.map(i=>({description:i.name+' · POS '+o.id.slice(0,8).toUpperCase(),quantity:i.quantity,unit:i.price,amount:i.quantity*i.price})))];
  const total=lines.reduce((n,l)=>n+l.amount,0),paid=(includeStay?Math.min(stay,Math.round(booking.paid*100)):0)+charges.reduce((n,o)=>n+o.paid,0),c=companyDetails(state.company);
  return {exchangeRate:includeStay?booking.exchangeRate:undefined,number:'INV-'+propertyId+'-'+booking.id+(availableCurrencies.length>1?'-'+currency:''),date:posDay(),property:state.hotel,company:state.company||{},color:state.appearance?.color||defaultColor,currency,availableCurrencies,guest:booking.guest,email:booking.email,phone:booking.phone,room:isHouse(state)?'Whole house':booking.room,roomType:state.rooms.find(r=>r.id===booking.room)?.type,status:booking.status,paymentMethod:includeStay?booking.paymentMethod:undefined,booking:booking.id,arrival:booking.arrival,departure:booking.departure,lines,total,paid,outstanding:Math.max(0,total-paid),accommodationCredit:includeStay?Math.max(0,Math.round(booking.paid*100)-stay):0,notes:c.invoiceNotes,paymentDetails:c.paymentDetails};
 }

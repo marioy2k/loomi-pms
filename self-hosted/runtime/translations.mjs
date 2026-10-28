@@ -137,6 +137,11 @@ export const dutch={
  "Whole house": "Hele huis",
  "Whole-house availability": "Beschikbaarheid van het hele huis",
  "Whole-house rental": "Verhuur van het hele huis",
+ "Subtotal": "Subtotaal",
+ "Discount type": "Soort korting",
+ "Discount": "Korting",
+ "Applies to the whole stay.": "Geldt voor het hele verblijf.",
+ "Enter a valid discount: 0–100% or a fixed amount up to the stay subtotal": "Vul een geldige korting in: 0–100% of een vast bedrag tot het verblijfssubtotaal",
  "Nightly rate": "Prijs per nacht",
  "Whole-house nightly rate": "Prijs per nacht voor het hele huis",
  "Nightly rate for the whole house": "Prijs per nacht voor het hele huis",
@@ -1524,6 +1529,7 @@ export function translateText(text,locale){
  const stay=key.match(/^(Room (.+)|Whole-house accommodation) · (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})$/);
  if(stay)return `${stay[2]?'Kamer '+stay[2]:'Verblijf in het hele huis'} · ${stay[3]} tot ${stay[4]}`;
  const patterns=[
+ [/^Discount \(([0-9.]+)%\)$/,m=>`Korting (${m[1]}%)`],
  [/^Purchase order (.+)$/,m=>`Inkooporder ${m[1]}`],
  [/^POS room charge payment (.+)$/,m=>`Betaling van kamerkosten via de kassa ${m[1]}`],
  [/^POS full sale reversal (.+)$/,m=>`Volledige terugboeking van kassaverkoop ${m[1]}`],
