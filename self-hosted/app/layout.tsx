@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import {ColorModeProvider} from "./color-mode";
 import {LanguageProvider} from "./language";
 
 export const metadata: Metadata = {
@@ -17,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased"><LanguageProvider>{children}</LanguageProvider></body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased"><LanguageProvider><ColorModeProvider>{children}</ColorModeProvider></LanguageProvider></body>
     </html>
   );
 }
