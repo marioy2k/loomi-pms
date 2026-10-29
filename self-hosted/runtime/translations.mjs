@@ -1,4 +1,5 @@
 export const dutch={
+ "Home":"Startpagina",
  "Switch to light mode": "Lichte modus inschakelen",
  "Switch to dark mode": "Donkere modus inschakelen",
  "Loomi Intelligence": "Loomi Intelligence",
