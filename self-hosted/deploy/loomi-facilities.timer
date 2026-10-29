@@ -1,0 +1,8 @@
+[Unit]
+Description=Process Loomi facility notifications every minute
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+Persistent=true
+[Install]
+WantedBy=timers.target
