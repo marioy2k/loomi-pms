@@ -13,7 +13,7 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/runtime ./runtime
-COPY --from=build --chown=node:node /app/tools/backup.mjs /app/tools/repair-reservation-dates.mjs ./tools/
+COPY --from=build --chown=node:node /app/tools/backup.mjs /app/tools/repair-reservation-dates.mjs /app/tools/facility-notifications.mjs ./tools/
 RUN mkdir -p /app/data && chown node:node /app/data
 USER node
 EXPOSE 3000

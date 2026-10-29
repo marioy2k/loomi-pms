@@ -1,0 +1,12 @@
+import {access} from '@/lib/access';
+import {isSuperAdmin,canAccessProperty} from '@/lib/permissions';
+import {requestedProperty} from '@/lib/properties';
+import {store} from '@/runtime/core.mjs';
+import {publicConfig,saveNotificationConfig,notificationConfig,deliver} from '@/runtime/notifications.mjs';
+import {failure} from '@/runtime/facilities.mjs';
+import {isAllowedOrigin} from '@/runtime/origins.mjs';
+import {readJson} from '@/runtime/request-json.mjs';
+async function guard(req:Request){const u=await access(),id=requestedProperty(req);if(!isSuperAdmin(u)||!canAccessProperty(u,id))failure(403,'Super Admin access is required');const db=store().db;if(!db.prepare('SELECT id FROM property WHERE id=?').get(id))failure(404,'Property not found');return {db,id,user:u!}}
+const error=(e:any)=>Response.json({error:e.status?e.message:'Notification request failed. Check provider settings.'},{status:e.status||503});
+export async function GET(req:Request){try{const {db,id}=await guard(req);return Response.json({config:publicConfig(db,id),deliveries:db.prepare('SELECT d.channel,d.status,d.attempts,d.last_error,o.event,o.created FROM notification_deliveries d JOIN notification_outbox o ON o.id=d.event_id WHERE o.property_id=? ORDER BY o.created DESC LIMIT 30').all(id)},{headers:{'Cache-Control':'private, no-store'}})}catch(e){return error(e)}}
+export async function POST(req:Request){try{if(!isAllowedOrigin(req))failure(403,'Invalid request origin');const {db,id,user}=await guard(req),x=await readJson(req,20000);if(x.action==='test'){if(!['discord','slack','teams','webhook','smtp'].includes(x.channel))failure(400,'Choose a notification connection');const config=notificationConfig(db,id)[x.channel];if(!config?.enabled)failure(400,'Save and enable this connection first');const key='notification-test:'+user.email,now=Date.now(),last=Number(db.prepare('SELECT value FROM settings WHERE key=?').get(key)?.value||0);if(now-last<30000)failure(429,'Wait 30 seconds before sending another test');db.prepare('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,String(now));await deliver(x.channel,config,'Loomi PMS test notification');return Response.json({sent:true})}if(x.action!=='save')failure(400,'Unknown notification action');const config=saveNotificationConfig(db,id,x.config);store().audit('notification-settings-updated',user.email,'Property '+id);return Response.json({config})}catch(e){return error(e)}}

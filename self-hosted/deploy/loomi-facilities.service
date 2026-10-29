@@ -1,0 +1,8 @@
+[Unit]
+Description=Loomi daily facility reminders and notification delivery
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker exec loomi-loomi-1 node tools/facility-notifications.mjs
+TimeoutStartSec=55
