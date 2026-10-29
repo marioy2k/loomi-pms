@@ -22,6 +22,6 @@ export async function GET(req:Request){try{const u=await access(),id=requestedPr
  if(canViewAccounting(u))put('Accounting','Accounts and reports available','Boekhouding en rapporten beschikbaar');
  const kinds=operationKinds.filter(k=>canOperate(u,k));if(kinds.length){const rows=db.prepare('SELECT kind,data FROM operations WHERE property_id=?').all(id);const n=rows.filter((r:any)=>kinds.includes(r.kind)&&!['Resolved','Received','Closed','Sent','Dismissed','Cancelled'].includes(JSON.parse(r.data).status)&&JSON.parse(r.data).status).length;put('Operations',`${n} open work items`,`${n} open werkzaamheden`,n>0)}
  if(can(u,'dashboard')){const n=count('SELECT count(*) n FROM property');put('All properties',`${n} properties`,`${n} accommodaties`)}
- if(can(u,'audit')){const n=count('SELECT count(*) n FROM activity_log WHERE property_id=? AND date(created,'-3 hours')=?',id,today);put('Activity history',`${n} updates today`,`${n} wijzigingen vandaag`)}
+ if(can(u,'audit')){const n=count("SELECT count(*) n FROM activity_log WHERE property_id=? AND date(created,'-3 hours')=?",id,today);put('Activity history',`${n} updates today`,`${n} wijzigingen vandaag`)}
  put('Settings','Property and account preferences','Accommodatie- en accountinstellingen');return Response.json({statuses:result,updated:new Date().toISOString()},{headers:{'Cache-Control':'private, no-store'}});
  }catch{return Response.json({error:'Status previews are unavailable'},{status:503})}}
