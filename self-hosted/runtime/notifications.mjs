@@ -28,8 +28,9 @@ export async function smtpSend(config,to,subject,text){const {default:nodemailer
 export async function deliver(channel,config,message){if(channel==='smtp')return smtpSend(config,config.to.split(',').map(v=>v.trim()),'Loomi PMS notification',message);return webhook(channel,config,message);}
 export async function processNotifications(db,now=Date.now(),send=deliver){
  // Claim each delivery before I/O. Expired claims retry after a worker crash.
+ const deadline=Date.now()+25000;
  const pending=db.prepare("SELECT d.*,o.property_id,o.message FROM notification_deliveries d JOIN notification_outbox o ON o.id=d.event_id WHERE d.status IN ('pending','sending') AND d.next_attempt<=? AND d.attempts<5 LIMIT 30").all(now);
- for(const d of pending){const c=notificationConfig(db,d.property_id)[d.channel];if(!c?.enabled){db.prepare("UPDATE notification_deliveries SET status='skipped' WHERE event_id=? AND channel=?").run(d.event_id,d.channel);continue}
+ for(const d of pending){if(Date.now()>=deadline)break;const c=notificationConfig(db,d.property_id)[d.channel];if(!c?.enabled){db.prepare("UPDATE notification_deliveries SET status='skipped' WHERE event_id=? AND channel=?").run(d.event_id,d.channel);continue}
   const claim=db.prepare("UPDATE notification_deliveries SET status='sending',attempts=attempts+1,next_attempt=? WHERE event_id=? AND channel=? AND next_attempt<=? AND status IN ('pending','sending')").run(now+60000,d.event_id,d.channel,now);if(!claim.changes)continue;
   try{await send(d.channel,c,d.message);db.prepare("UPDATE notification_deliveries SET status='sent',last_error='' WHERE event_id=? AND channel=?").run(d.event_id,d.channel)}catch{db.prepare("UPDATE notification_deliveries SET status=?,last_error='Provider delivery failed. Check configuration and connection.',next_attempt=? WHERE event_id=? AND channel=?").run(d.attempts>=4?'failed':'pending',now+Math.min(3600000,60000*2**d.attempts),d.event_id,d.channel)}
  }
