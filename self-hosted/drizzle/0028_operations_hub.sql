@@ -1,0 +1,17 @@
+ALTER TABLE facility_tasks ADD COLUMN room TEXT NOT NULL DEFAULT '';
+ALTER TABLE facility_tasks ADD COLUMN checklist TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE facility_tasks ADD COLUMN photo_required INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE facility_tasks ADD COLUMN blocks_room INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE facility_checks ADD COLUMN completed_steps TEXT NOT NULL DEFAULT '[]';
+CREATE TABLE room_issues(id TEXT PRIMARY KEY,property_id INTEGER NOT NULL REFERENCES property(id),room TEXT NOT NULL,category TEXT NOT NULL,title TEXT NOT NULL,notes TEXT NOT NULL,priority TEXT NOT NULL,blocks_room INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'Open',task_id TEXT NOT NULL UNIQUE REFERENCES facility_tasks(id),created TEXT NOT NULL,actor TEXT NOT NULL,request_hash TEXT NOT NULL);
+CREATE INDEX room_issues_room ON room_issues(property_id,room,status);
+CREATE TABLE operations_photos(id TEXT PRIMARY KEY,property_id INTEGER NOT NULL REFERENCES property(id),entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,mime TEXT NOT NULL,data TEXT NOT NULL,created TEXT NOT NULL,actor TEXT NOT NULL);
+CREATE INDEX operations_photos_parent ON operations_photos(property_id,entity_type,entity_id);
+CREATE TABLE task_parts(id TEXT PRIMARY KEY,property_id INTEGER NOT NULL REFERENCES property(id),task_id TEXT NOT NULL REFERENCES facility_tasks(id),item_id TEXT NOT NULL REFERENCES inventory_items(id),quantity INTEGER NOT NULL CHECK(quantity>0),status TEXT NOT NULL DEFAULT 'Reserved',actor TEXT NOT NULL,used_by TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,updated TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1);
+CREATE INDEX task_parts_stock ON task_parts(property_id,item_id,status);
+CREATE TRIGGER maintenance_reserved_stock BEFORE UPDATE OF stock ON inventory_items WHEN NEW.stock<COALESCE((SELECT sum(quantity) FROM task_parts WHERE item_id=NEW.id AND status='Reserved'),0) BEGIN SELECT RAISE(ABORT,'Stock is reserved for maintenance. Release the reservation first.'); END;
+CREATE TRIGGER maintenance_reserved_item BEFORE UPDATE OF active ON inventory_items WHEN NEW.active=0 AND EXISTS(SELECT 1 FROM task_parts WHERE item_id=NEW.id AND status='Reserved') BEGIN SELECT RAISE(ABORT,'Release maintenance reservations before deactivating this item.'); END;
+CREATE TABLE operation_alerts(id TEXT PRIMARY KEY,property_id INTEGER NOT NULL REFERENCES property(id),source_kind TEXT NOT NULL,source_id TEXT NOT NULL,cycle_key TEXT NOT NULL,title TEXT NOT NULL,created TEXT NOT NULL,acknowledged_by TEXT,acknowledged_at TEXT,acknowledgement_note TEXT NOT NULL DEFAULT '',escalated_at TEXT,resolved_at TEXT,version INTEGER NOT NULL DEFAULT 1,UNIQUE(property_id,source_kind,source_id,cycle_key));
+CREATE INDEX operation_alerts_pending ON operation_alerts(property_id,resolved_at,acknowledged_at);
+UPDATE staff SET permissions=json_insert(permissions,'$[#]','reportIssues') WHERE NOT EXISTS(SELECT 1 FROM json_each(staff.permissions) WHERE value='reportIssues');
+UPDATE staff SET permissions=json_insert(permissions,'$[#]','maintenanceParts') WHERE EXISTS(SELECT 1 FROM json_each(staff.permissions) WHERE value='maintenance') AND EXISTS(SELECT 1 FROM json_each(staff.permissions) WHERE value='inventoryRequest') AND NOT EXISTS(SELECT 1 FROM json_each(staff.permissions) WHERE value='maintenanceParts');
