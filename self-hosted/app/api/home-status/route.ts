@@ -1,3 +1,4 @@
+import {loadReadiness} from '@/runtime/operations-hub.mjs';
 import {loadHandovers} from '@/runtime/handovers.mjs';
 import {access} from '@/lib/access';
 import {requestedProperty} from '@/lib/properties';
@@ -12,6 +13,8 @@ export async function GET(req:Request){try{const u=await access(),id=requestedPr
  if(can(u,'overview'))put('Overview',`${arrivals} arrivals today · ${active.length} occupied`,`${arrivals} aankomsten vandaag · ${active.length} bezet`);
  if(can(u,'reservations')||can(u,'bookingPayments')||can(u,'bookingRefunds')||can(u,'bookingRates'))put('Reservations',`${arrivals} expected arrivals today`,`${arrivals} verwachte aankomsten vandaag`);
  if(can(u,'calendar'))put('Room calendar',`${s.rooms.length-active.length} available today`,`${s.rooms.length-active.length} beschikbaar vandaag`);
+ if((['rooms','calendar','reservations','housekeeping','reportIssues','maintenance','waterChecks'] as const).some(k=>can(u,k))){const {rooms}=loadReadiness(db,u,id),n=rooms.filter((r:any)=>r.ready).length;put('Room readiness',`${n} of ${rooms.length} rooms ready`,`${n} van ${rooms.length} kamers gereed`,n<rooms.length)}
+ if(can(u,'maintenanceParts')&&u.enabledModules?.includes('maintenance')){const n=count("SELECT count(*) n FROM task_parts WHERE property_id=? AND status='Reserved'",id);put('Spare parts',`${n} parts reservations`,`${n} onderdelenreserveringen`)}
  if(can(u,'guests')){const n=new Set(s.bookings.map((b:any)=>b.guestId||b.email||b.guest)).size;put('Guests',`${n} guest profiles`,`${n} gastprofielen`)}
  if(can(u,'housekeeping')){const n=s.rooms.filter((r:any)=>!['Clean','Out of service'].includes(r.housekeeping)).length;for(const name of ['Rooms','Housekeeping'])put(name,`${n} rooms need cleaning`,`${n} kamers moeten schoon`,n>0)}
  for(const [kind,name] of [['water','Water tanks'],['technical','Technical department']] as const){if(kind==='water'?(can(u,'waterChecks')||can(u,'maintenance')):can(u,'maintenance')){const {tasks}=loadFacilities(db,u,id,kind),legacy=kind==='technical'?count("SELECT count(*) n FROM operations WHERE property_id=? AND kind='maintenance' AND json_extract(data,'$.status')<>'Resolved'",id):0,due=tasks.filter((r:any)=>r.needsCheck).length+legacy,alerts=tasks.filter((r:any)=>['Low','Empty','Problem','Needs attention'].includes(r.status)).length;put(name,`${due} due · ${alerts} need attention`,`${due} te doen · ${alerts} aandacht nodig`,due+alerts>0)}}

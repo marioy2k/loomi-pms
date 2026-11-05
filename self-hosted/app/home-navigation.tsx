@@ -5,6 +5,8 @@ import {LocalizedText,useLanguage} from './language';
 import styles from './home-navigation.module.css';
 type Item=readonly [string,ComponentType<{size?:number;'aria-hidden'?:boolean}>];
 const descriptions:Record<string,readonly [string,string]>={
+ 'Room readiness':['Cleaning and repairs before check-in','Schoonmaak en reparaties vóór inchecken'],
+ 'Spare parts':['Reserve parts and track maintenance stock','Onderdelen reserveren en onderhoudsvoorraad volgen'],
  'Preventive maintenance':['Scheduled servicing and overdue maintenance','Gepland onderhoud en achterstallige taken'],
  'Shift handover':['Notes and unfinished work for the next shift','Notities en open werk voor de volgende ploeg'],
  'Water tanks':['Daily water levels and tank checks','Dagelijkse waterstanden en tankcontroles'],

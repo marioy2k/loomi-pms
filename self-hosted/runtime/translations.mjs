@@ -1,4 +1,10 @@
 export const dutch={
+ "Room readiness":"Kamer-gereedheid",
+ "Spare parts":"Reserveonderdelen",
+ "Report room problems with photos":"Kamerproblemen met foto’s melden",
+ "Reserve and use maintenance spare parts":"Reserveonderdelen voor onderhoud reserveren en gebruiken",
+ "Maintenance use":"Onderhoudsverbruik",
+
  "Preventive maintenance":"Preventief onderhoud",
  "Shift handover":"Ploegoverdracht",
  "Create and receive shift handovers":"Ploegoverdrachten maken en ontvangen",

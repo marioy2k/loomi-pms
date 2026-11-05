@@ -29,7 +29,7 @@ export default function Login(){
     <form onSubmit={async e=>{
      e.preventDefault();setError('');setBusy(true);
      const f=new FormData(e.currentTarget);
-     try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(f))});const x=await r.json();if(!r.ok)throw Error(x.error||'Unable to sign in');location.href='/'}catch(e){setError(e instanceof Error?e.message:'Unable to sign in. Please try again.');setBusy(false)}
+     try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(f))});const x=await r.json();if(!r.ok)throw Error(x.error||'Unable to sign in');const next=new URLSearchParams(location.search).get('next')||'/';location.href=next.startsWith('/report-room?')||next.startsWith('/room-labels?')?next:'/'}catch(e){setError(e instanceof Error?e.message:'Unable to sign in. Please try again.');setBusy(false)}
     }}>
      <label className={styles.label} htmlFor="login-email"><LocalizedText text={"Email address"}/></label>
      <div className={styles.inputWrap}><Mail size={18} aria-hidden="true"/><LangInput id="login-email" name="email" type="email" placeholder="you@yourhotel.com" autoComplete="username" autoCapitalize="none" spellCheck={false} required disabled={busy}/></div>
