@@ -1,3 +1,4 @@
+import {loadHandovers} from '@/runtime/handovers.mjs';
 import {access} from '@/lib/access';
 import {requestedProperty} from '@/lib/properties';
 import {store} from '@/runtime/core.mjs';
@@ -14,6 +15,8 @@ export async function GET(req:Request){try{const u=await access(),id=requestedPr
  if(can(u,'guests')){const n=new Set(s.bookings.map((b:any)=>b.guestId||b.email||b.guest)).size;put('Guests',`${n} guest profiles`,`${n} gastprofielen`)}
  if(can(u,'housekeeping')){const n=s.rooms.filter((r:any)=>!['Clean','Out of service'].includes(r.housekeeping)).length;for(const name of ['Rooms','Housekeeping'])put(name,`${n} rooms need cleaning`,`${n} kamers moeten schoon`,n>0)}
  for(const [kind,name] of [['water','Water tanks'],['technical','Technical department']] as const){if(kind==='water'?(can(u,'waterChecks')||can(u,'maintenance')):can(u,'maintenance')){const {tasks}=loadFacilities(db,u,id,kind),legacy=kind==='technical'?count("SELECT count(*) n FROM operations WHERE property_id=? AND kind='maintenance' AND json_extract(data,'$.status')<>'Resolved'",id):0,due=tasks.filter((r:any)=>r.needsCheck).length+legacy,alerts=tasks.filter((r:any)=>['Low','Empty','Problem','Needs attention'].includes(r.status)).length;put(name,`${due} due · ${alerts} need attention`,`${due} te doen · ${alerts} aandacht nodig`,due+alerts>0)}}
+ if(can(u,'maintenance')){const {tasks}=loadFacilities(db,u,id,'technical'),n=tasks.filter((r:any)=>!['once','daily'].includes(r.recurrence)&&r.needsCheck).length;put('Preventive maintenance',`${n} scheduled jobs due`,`${n} onderhoudstaken te doen`,n>0)}
+ if(can(u,'shiftHandover')){const n=loadHandovers(db,u,id).handovers.filter((h:any)=>!h.acknowledged_at).length;put('Shift handover',`${n} handovers awaiting receipt`,`${n} overdrachten wachten op ontvangst`,n>0)}
  if(canViewInventory(u)){const n=count('SELECT count(*) n FROM inventory_items WHERE property_id=? AND active=1 AND stock<=minimum',id);put('Inventory',`${n} items at low stock`,`${n} artikelen met lage voorraad`,n>0)}
  if(can(u,'vehicleView')){const n=count("SELECT count(*) n FROM fleet_defects WHERE property_id=? AND status<>'Resolved'",id);put('Vehicles',`${n} unresolved defects`,`${n} openstaande defecten`,n>0)}
  if(can(u,'securityView')){const n=count("SELECT count(*) n FROM security_entries WHERE property_id=? AND status<>'Closed'",id);put('Security & keys',`${n} open security entries`,`${n} open beveiligingsmeldingen`,n>0)}

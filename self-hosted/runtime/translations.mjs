@@ -1,4 +1,8 @@
 export const dutch={
+ "Preventive maintenance":"Preventief onderhoud",
+ "Shift handover":"Ploegoverdracht",
+ "Create and receive shift handovers":"Ploegoverdrachten maken en ontvangen",
+
  "Water tanks":"Watertanks",
  "Technical department":"Technische dienst",
  "Water-tank attendant":"Watertankmedewerker",
